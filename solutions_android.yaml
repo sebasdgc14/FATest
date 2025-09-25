@@ -1,0 +1,365 @@
+- context:
+    - Usage of Android development for mobile applications
+    - Ensuring security of sensitive user data in Android applications
+
+  need: Disable ADB backup to prevent unauthorized data extraction
+
+  solution:
+    insecure_code_example:
+      description: |
+        In this AndroidManifest.xml configuration, the `android:allowBackup` attribute
+        is either set to `true` or is missing, which defaults to `true`. This means
+        that Android's ADB backup feature is enabled, allowing users (or attackers)
+        with ADB access to extract app data, including sensitive user information.
+
+        This vulnerability can be exploited if a device is compromised or if an attacker
+        gains temporary access to a user's unlocked device, allowing them to execute
+        `adb backup` commands to retrieve application data.
+
+        To mitigate this risk, the `android:allowBackup` attribute should be explicitly
+        set to `false` in the AndroidManifest.xml file.
+
+      text: |
+        <manifest ...>
+            <application
+                android:name=".MyApplication"
+                android:allowBackup="true"
+                android:label="@string/app_name"
+                android:theme="@style/AppTheme">
+            </application>
+        </manifest>
+
+    language: android
+
+    secure_code_example:
+      description: |
+        This corrected AndroidManifest.xml configuration explicitly sets the
+        `android:allowBackup` attribute to `false`, preventing the application from being
+        backed up using ADB.
+
+        By disabling ADB backup, attackers cannot extract sensitive application data,
+        reducing the risk of data theft in case of unauthorized access to the device.
+
+        It is recommended to apply this configuration to all applications that handle
+        sensitive user data.
+
+      text: |
+        <manifest ...>
+            <application
+                android:name=".MyApplication"
+                android:allowBackup="false"
+                android:label="@string/app_name"
+                android:theme="@style/AppTheme">
+            </application>
+        </manifest>
+
+    steps:
+      - Open the AndroidManifest.xml file of your application.
+      - Locate the `<application>` tag and check the value of `android:allowBackup`.
+      - If it is set to `true` or missing, explicitly set `android:allowBackup="false"`.
+      - Save the changes and rebuild the application to enforce the security setting.
+
+  title: Insecure service configuration - ADB Backup
+  vulnerability_id: "055"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of Android development for mobile applications
+    - Ensuring production APKs do not expose debugging capabilities
+
+  need: Disable debugging in production APKs to prevent unauthorized access
+
+  solution:
+    insecure_code_example:
+      description: |
+        In this AndroidManifest.xml configuration, the `android:debuggable` attribute
+        is either set to `true` or is missing, which defaults to `false` in release builds
+        but might be enabled due to misconfigurations.
+
+        If `android:debuggable="true"` is present in a production APK, attackers can connect
+        to the application via ADB and execute debugging commands, potentially exposing
+        sensitive data, internal logic, and even allowing code injection.
+
+        To mitigate this risk, the `android:debuggable` attribute should be explicitly
+        set to `false` in the AndroidManifest.xml file or managed via build configurations.
+
+      text: |
+        <manifest ...>
+            <application
+                android:name=".MyApplication"
+                android:debuggable="true"
+                android:label="@string/app_name"
+                android:theme="@style/AppTheme">
+            </application>
+        </manifest>
+
+    language: android
+
+    secure_code_example:
+      description: |
+        This corrected AndroidManifest.xml configuration explicitly removes the
+        `android:debuggable` attribute, relying on the build system to set it correctly.
+
+        By default, Android's release builds disable debugging, but to ensure no
+        accidental misconfiguration occurs, it is recommended to verify that `debuggable`
+        is not set to `true` manually.
+
+        Additionally, the Gradle build configuration should enforce this security setting
+        by ensuring that debugging is only enabled in debug builds.
+
+      text: |
+        <manifest ...>
+            <application
+                android:name=".MyApplication"
+                android:label="@string/app_name"
+                android:theme="@style/AppTheme">
+            </application>
+        </manifest>
+
+        // Ensure proper configuration in build.gradle
+        android {
+            buildTypes {
+                release {
+                    debuggable false
+                }
+            }
+        }
+
+    steps:
+      - Open the AndroidManifest.xml file of your application.
+      - Ensure that `android:debuggable` is not set to `true` in the `<application>` tag.
+      - Open the build.gradle file and verify that `debuggable false` is enforced for
+        release builds.
+      - Rebuild the application and confirm that the production APK does not have
+        debugging enabled.
+
+  title: Debugging enabled in production - APK
+  vulnerability_id: "058"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of Android development for mobile applications
+    - Preventing sensitive input data from being cached or suggested by the keyboard
+
+  need: Disable caching and keyboard suggestions for sensitive input fields
+
+  solution:
+    insecure_code_example:
+      description: |
+        In this example, an `EditText` field is used to accept user input but does
+        not specify `android:inputType="textNoSuggestions"`, which means the keyboard
+        may cache and suggest previously entered data.
+
+        Similarly, `TextView` elements used for user input display may also expose
+        cached values if `android:inputType` is not properly set.
+
+        Attackers or malicious applications could retrieve cached keyboard inputs,
+        potentially exposing sensitive data like passwords, credit card numbers, or
+        personally identifiable information.
+
+      text: |
+        <EditText
+            android:id="@+id/inputField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter sensitive data" />
+
+        <TextView
+            android:id="@+id/outputField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sensitive data displayed here" />
+
+    language: android
+
+    secure_code_example:
+      description: |
+        The secure code ensures that `android:inputType="textNoSuggestions"` is applied
+        to `EditText` and `TextView` elements to prevent caching and keyboard suggestions.
+
+        This setting disables keyboard learning for these fields, preventing previously
+        entered data from being suggested or cached.
+
+      text: |
+        <EditText
+            android:id="@+id/inputField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter sensitive data"
+            android:inputType="textNoSuggestions" />
+
+        <TextView
+            android:id="@+id/outputField"
+            android:layout_width="match_parent"
+            android:height="wrap_content"
+            android:text="Sensitive data displayed here"
+            android:inputType="textNoSuggestions" />
+
+    steps:
+      - Open the XML layout file containing input fields.
+      - Add `android:inputType="textNoSuggestions"` to `EditText` and `TextView` elements.
+      - Ensure that all user-input or displayed sensitive data fields prevent caching.
+      - Test the application by verifying that the keyboard does not suggest previously entered data.
+
+  title: Cached form fields
+  vulnerability_id: "065"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of Android development for mobile applications
+    - Ensuring secure access controls in Content Providers
+
+  need: Prevent unauthorized access to files exposed through Content Providers
+
+  solution:
+    insecure_code_example:
+      description: |
+        The above `AndroidManifest.xml` configuration defines a `ContentProvider`
+        that exposes application data **without proper access restrictions**.
+
+        - The attribute `android:exported="true"` allows any app on the device to
+          access this Content Provider.
+        - The `android:grantUriPermissions="true"` attribute permits other apps to
+          access sensitive files without additional restrictions.
+        - Without proper `android:permission` or `android:readPermission` attributes,
+          any application can query and retrieve sensitive data.
+
+        If an attacker or a malicious app exploits this misconfiguration, they can
+        access or modify sensitive files without authorization.
+
+      text: |
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="com.example.app">
+
+            <application
+                android:allowBackup="true"
+                android:theme="@style/AppTheme">
+
+                <provider
+                    android:name=".InsecureContentProvider"
+                    android:authorities="com.example.app.provider"
+                    android:exported="true"
+                    android:grantUriPermissions="true" />
+
+            </application>
+        </manifest>
+
+    language: android
+
+    secure_code_example:
+      description: |
+        The secure version restricts access to the Content Provider by:
+
+        - Setting `android:exported="false"` to **prevent external access**.
+        - Using `android:permission="com.example.app.SECURE_PERMISSION"` to enforce
+          authentication and limit access to trusted applications.
+        - Explicitly defining `android:grantUriPermissions="false"` unless required.
+
+        These changes ensure that only authorized apps with explicit permissions can
+        access the files exposed by this Content Provider.
+
+      text: |
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="com.example.app">
+
+            <application
+                android:allowBackup="true"
+                android:theme="@style/AppTheme">
+
+                <provider
+                    android:name=".SecureContentProvider"
+                    android:authorities="com.example.app.provider"
+                    android:exported="false"
+                    android:permission="com.example.app.SECURE_PERMISSION"
+                    android:grantUriPermissions="false" />
+
+            </application>
+        </manifest>
+
+    steps:
+      - Open the `AndroidManifest.xml` file.
+      - Identify any `<provider>` components.
+      - Set `android:exported="false"` unless external access is explicitly required.
+      - If external access is necessary, enforce permission controls using `android:permission`.
+      - Avoid using `android:grantUriPermissions="true"` unless strictly needed.
+
+  title: Unauthorized access to files - APK Content Provider
+  vulnerability_id: "075"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of Android development for mobile applications
+    - Ensuring that applications request only the necessary permissions
+
+  need: Restrict application permissions to the minimum required for functionality
+
+  solution:
+    insecure_code_example:
+      description: |
+        The above `AndroidManifest.xml` file defines excessive permissions that
+        are not required for the core functionality of the application.
+
+        - `READ_SMS` allows reading SMS messages, which is sensitive data.
+        - `WRITE_EXTERNAL_STORAGE` enables writing to external storage, which can
+          be exploited for data exfiltration.
+        - `RECORD_AUDIO` allows capturing microphone input, which could be used for
+          eavesdropping.
+
+        If an attacker gains control over the app or exploits a vulnerability, these
+        excessive permissions could be abused to access private user data.
+
+      text: |
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="com.example.app">
+
+            <uses-permission android:name="android.permission.READ_SMS" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+            <application
+                android:allowBackup="true"
+                android:theme="@style/AppTheme">
+                <activity android:name=".MainActivity">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+
+    language: android
+
+    secure_code_example:
+      description: |
+        The secure code ensures that only the **necessary** permissions are granted.
+        If the application does not require access to SMS, external storage, or
+        microphone input, these permissions should be **removed**.
+
+        Before adding any permission, ensure that it is essential for the app's
+        functionality and follows the **principle of least privilege**.
+
+      text: |
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="com.example.app">
+
+            <!-- Only essential permissions should be included -->
+            <uses-permission android:name="android.permission.INTERNET" />
+
+            <application
+                android:allowBackup="true"
+                android:theme="@style/AppTheme">
+                <activity android:name=".MainActivity">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+            </application>
+        </manifest>
+
+    steps:
+      - Open the `AndroidManifest.xml` file.
+      - Review all `<uses-permission>` entries and remove any unnecessary ones.
+      - Ensure that permissions align with the app's core functionality.
+      - Test the app to confirm that it works correctly with the minimum required permissions.
+
+  title: Excessive privileges - Mobile App
+  vulnerability_id: "346"
+  last_update_time: 04/03/2025
