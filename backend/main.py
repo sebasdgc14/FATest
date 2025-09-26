@@ -28,6 +28,7 @@ def health():
 
 
 DATA_ROOT = Path(__file__).resolve().parents[1]
+SOLUTIONS_DIR = DATA_ROOT / "solutions_json"
 
 
 def _read_json(filename: str):
@@ -98,39 +99,93 @@ def api_vulnerabilities(
     return _filter_lang(data, lang)
 
 
-# WATCH OUT HERE, ONLY ANDROID IS RECOGNIZED WE NEED TO ADD THE REST!!!
 @app.get("/api/solutions", response_model=List[SolutionOut])
-def api_solutions():
-    data = _read_json("solutions_android.json")
-    if not isinstance(data, list):
+def api_solutions(
+    name: str = Query(
+        ...,  # required
+        description=(
+            "Solutions dataset name (filename stem) such as 'android' or 'aws'. "
+            "Must match a JSON file named <name>.json inside solutions_json/."
+        ),
+    ),
+):
+    """Return one solutions dataset.
+
+    Expected file layout:
+        solutions_json/
+            android.json
+            aws.json
+            ...
+
+    Call pattern:
+        GET /api/solutions?name=android
+    """
+    if not SOLUTIONS_DIR.exists():
+        raise HTTPException(status_code=404, detail="solutions directory missing")
+
+    fname = f"{name}.json" if not name.endswith(".json") else name
+    path = SOLUTIONS_DIR / fname
+    if not path.exists():
+        available = sorted(p.name for p in SOLUTIONS_DIR.glob("*.json"))
         raise HTTPException(
-            status_code=500, detail="solutions.json root must be a list"
+            status_code=404,
+            detail={
+                "error": "solutions dataset not found",
+                "requested": fname,
+                "available": available,
+            },
         )
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid JSON in {path.name}: {e}")
+    if not isinstance(data, list):
+        raise HTTPException(status_code=500, detail=f"{path.name} root must be a list")
     return data
 
 
 @app.get("/api/hub")
 def api_hub():
     datasets = []
-    for name in ["requirements", "compliance", "vulnerabilities", "solutions"]:
-        filename = f"{name}.json"
+
+    # Core single-file datasets at project root
+    for core in ["requirements", "compliance", "vulnerabilities"]:
+        filename = f"{core}.json"
         path = DATA_ROOT / filename
         exists = path.exists()
-        count = 0
-        if exists:
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(data, list):
-                    count = len(data)
-            except Exception:
-                pass
         datasets.append(
             {
-                "name": name,
-                "endpoint": f"/api/{name}",
+                "name": core,
+                "endpoint": f"/api/{core}",
                 "file": filename,
                 "exists": exists,
-                "count": count,
             }
         )
+
+    # Solutions multi-file summary
+    solutions_summary = {
+        "name": "solutions",
+        "endpoint": "/api/solutions?name=<dataset>",
+        "directory": str(SOLUTIONS_DIR.relative_to(DATA_ROOT))
+        if SOLUTIONS_DIR.exists()
+        else None,
+        "exists": SOLUTIONS_DIR.exists(),
+        "sources": [],
+    }
+    if SOLUTIONS_DIR.exists():
+        for p in sorted(SOLUTIONS_DIR.glob("*.json")):
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                if isinstance(data, list):
+                    solutions_summary["sources"].append({"name": p.stem})
+                else:
+                    solutions_summary["sources"].append(
+                        {"name": p.stem, "error": "root_not_list"}
+                    )
+            except Exception:
+                solutions_summary["sources"].append(
+                    {"name": p.stem, "error": "invalid_json"}
+                )
+    datasets.append(solutions_summary)
+
     return {"datasets": datasets}

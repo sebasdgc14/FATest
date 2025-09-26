@@ -1,10 +1,8 @@
 from test import (
     load_yaml_mapping,
-    load_yaml_sequence,
     parse_requirements,
     parse_compliance,
     parse_vulnerabilities,
-    parse_solutions,
 )
 import json
 from pathlib import Path
@@ -66,24 +64,3 @@ try:
     print("Wrote vulnerabilities.json")
 except FileNotFoundError:
     print("vulnerabilities_data.yaml not found; skipping vulnerability test block.")
-
-
-# ----------------------
-# Solutions data (test block)
-# ----------------------
-try:
-    s_data = load_yaml_sequence("solutions_android.yaml")
-    sols = parse_solutions(s_data)
-
-    print("\nParsed solution items:", len(sols))
-    # Print the first solutions entry for inspection
-    if sols:
-        print(json.dumps(sols[0], ensure_ascii=False, indent=2))
-
-    # Persist solutions JSON for inspection
-    Path("solutions_android.json").write_text(
-        json.dumps(sols, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print("Wrote solutions_android.json")
-except FileNotFoundError:
-    print("v=solutions_android.yaml not found; skipping solutions test block.")
