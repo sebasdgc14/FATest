@@ -193,8 +193,8 @@ def normalize_compliance(name: str, raw: Dict[str, Any]) -> Dict[str, Any]:
     build = {
         "id": ensure_str(name),
         "title": title,
-        "en_summary": en_summary,
-        "es_summary": es_summary,
+        "en": {"summary": en_summary},
+        "es": {"summary": es_summary},
         "definitions": definitions_list,
         "metadata": raw.get("metadata", {}),
         "last_update_time": last,

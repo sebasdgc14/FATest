@@ -1,0 +1,138 @@
+[
+  {
+    "vulnerability_id": "055",
+    "title": "Insecure service configuration - ADB Backup",
+    "context": [
+      "Usage of Android development for mobile applications",
+      "Ensuring security of sensitive user data in Android applications"
+    ],
+    "need": "Disable ADB backup to prevent unauthorized data extraction",
+    "solution": {
+      "language": "android",
+      "insecure_code_example": {
+        "description": "In this AndroidManifest.xml configuration, the `android:allowBackup` attribute\nis either set to `true` or is missing, which defaults to `true`. This means\nthat Android's ADB backup feature is enabled, allowing users (or attackers)\nwith ADB access to extract app data, including sensitive user information.\n\nThis vulnerability can be exploited if a device is compromised or if an attacker\ngains temporary access to a user's unlocked device, allowing them to execute\n`adb backup` commands to retrieve application data.\n\nTo mitigate this risk, the `android:allowBackup` attribute should be explicitly\nset to `false` in the AndroidManifest.xml file.\n",
+        "text": "<manifest ...>\n    <application\n        android:name=\".MyApplication\"\n        android:allowBackup=\"true\"\n        android:label=\"@string/app_name\"\n        android:theme=\"@style/AppTheme\">\n    </application>\n</manifest>\n"
+      },
+      "secure_code_example": {
+        "description": "This corrected AndroidManifest.xml configuration explicitly sets the\n`android:allowBackup` attribute to `false`, preventing the application from being\nbacked up using ADB.\n\nBy disabling ADB backup, attackers cannot extract sensitive application data,\nreducing the risk of data theft in case of unauthorized access to the device.\n\nIt is recommended to apply this configuration to all applications that handle\nsensitive user data.\n",
+        "text": "<manifest ...>\n    <application\n        android:name=\".MyApplication\"\n        android:allowBackup=\"false\"\n        android:label=\"@string/app_name\"\n        android:theme=\"@style/AppTheme\">\n    </application>\n</manifest>\n"
+      },
+      "steps": [
+        "Open the AndroidManifest.xml file of your application.",
+        "Locate the `<application>` tag and check the value of `android:allowBackup`.",
+        "If it is set to `true` or missing, explicitly set `android:allowBackup=\"false\"`.",
+        "Save the changes and rebuild the application to enforce the security setting."
+      ]
+    },
+    "last_update_time": "04/03/2025"
+  },
+  {
+    "vulnerability_id": "058",
+    "title": "Debugging enabled in production - APK",
+    "context": [
+      "Usage of Android development for mobile applications",
+      "Ensuring production APKs do not expose debugging capabilities"
+    ],
+    "need": "Disable debugging in production APKs to prevent unauthorized access",
+    "solution": {
+      "language": "android",
+      "insecure_code_example": {
+        "description": "In this AndroidManifest.xml configuration, the `android:debuggable` attribute\nis either set to `true` or is missing, which defaults to `false` in release builds\nbut might be enabled due to misconfigurations.\n\nIf `android:debuggable=\"true\"` is present in a production APK, attackers can connect\nto the application via ADB and execute debugging commands, potentially exposing\nsensitive data, internal logic, and even allowing code injection.\n\nTo mitigate this risk, the `android:debuggable` attribute should be explicitly\nset to `false` in the AndroidManifest.xml file or managed via build configurations.\n",
+        "text": "<manifest ...>\n    <application\n        android:name=\".MyApplication\"\n        android:debuggable=\"true\"\n        android:label=\"@string/app_name\"\n        android:theme=\"@style/AppTheme\">\n    </application>\n</manifest>\n"
+      },
+      "secure_code_example": {
+        "description": "This corrected AndroidManifest.xml configuration explicitly removes the\n`android:debuggable` attribute, relying on the build system to set it correctly.\n\nBy default, Android's release builds disable debugging, but to ensure no\naccidental misconfiguration occurs, it is recommended to verify that `debuggable`\nis not set to `true` manually.\n\nAdditionally, the Gradle build configuration should enforce this security setting\nby ensuring that debugging is only enabled in debug builds.\n",
+        "text": "<manifest ...>\n    <application\n        android:name=\".MyApplication\"\n        android:label=\"@string/app_name\"\n        android:theme=\"@style/AppTheme\">\n    </application>\n</manifest>\n\n// Ensure proper configuration in build.gradle\nandroid {\n    buildTypes {\n        release {\n            debuggable false\n        }\n    }\n}\n"
+      },
+      "steps": [
+        "Open the AndroidManifest.xml file of your application.",
+        "Ensure that `android:debuggable` is not set to `true` in the `<application>` tag.",
+        "Open the build.gradle file and verify that `debuggable false` is enforced for release builds.",
+        "Rebuild the application and confirm that the production APK does not have debugging enabled."
+      ]
+    },
+    "last_update_time": "04/03/2025"
+  },
+  {
+    "vulnerability_id": "065",
+    "title": "Cached form fields",
+    "context": [
+      "Usage of Android development for mobile applications",
+      "Preventing sensitive input data from being cached or suggested by the keyboard"
+    ],
+    "need": "Disable caching and keyboard suggestions for sensitive input fields",
+    "solution": {
+      "language": "android",
+      "insecure_code_example": {
+        "description": "In this example, an `EditText` field is used to accept user input but does\nnot specify `android:inputType=\"textNoSuggestions\"`, which means the keyboard\nmay cache and suggest previously entered data.\n\nSimilarly, `TextView` elements used for user input display may also expose\ncached values if `android:inputType` is not properly set.\n\nAttackers or malicious applications could retrieve cached keyboard inputs,\npotentially exposing sensitive data like passwords, credit card numbers, or\npersonally identifiable information.\n",
+        "text": "<EditText\n    android:id=\"@+id/inputField\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:hint=\"Enter sensitive data\" />\n\n<TextView\n    android:id=\"@+id/outputField\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:text=\"Sensitive data displayed here\" />\n"
+      },
+      "secure_code_example": {
+        "description": "The secure code ensures that `android:inputType=\"textNoSuggestions\"` is applied\nto `EditText` and `TextView` elements to prevent caching and keyboard suggestions.\n\nThis setting disables keyboard learning for these fields, preventing previously\nentered data from being suggested or cached.\n",
+        "text": "<EditText\n    android:id=\"@+id/inputField\"\n    android:layout_width=\"match_parent\"\n    android:layout_height=\"wrap_content\"\n    android:hint=\"Enter sensitive data\"\n    android:inputType=\"textNoSuggestions\" />\n\n<TextView\n    android:id=\"@+id/outputField\"\n    android:layout_width=\"match_parent\"\n    android:height=\"wrap_content\"\n    android:text=\"Sensitive data displayed here\"\n    android:inputType=\"textNoSuggestions\" />\n"
+      },
+      "steps": [
+        "Open the XML layout file containing input fields.",
+        "Add `android:inputType=\"textNoSuggestions\"` to `EditText` and `TextView` elements.",
+        "Ensure that all user-input or displayed sensitive data fields prevent caching.",
+        "Test the application by verifying that the keyboard does not suggest previously entered data."
+      ]
+    },
+    "last_update_time": "04/03/2025"
+  },
+  {
+    "vulnerability_id": "075",
+    "title": "Unauthorized access to files - APK Content Provider",
+    "context": [
+      "Usage of Android development for mobile applications",
+      "Ensuring secure access controls in Content Providers"
+    ],
+    "need": "Prevent unauthorized access to files exposed through Content Providers",
+    "solution": {
+      "language": "android",
+      "insecure_code_example": {
+        "description": "The above `AndroidManifest.xml` configuration defines a `ContentProvider`\nthat exposes application data **without proper access restrictions**.\n\n- The attribute `android:exported=\"true\"` allows any app on the device to\n  access this Content Provider.\n- The `android:grantUriPermissions=\"true\"` attribute permits other apps to\n  access sensitive files without additional restrictions.\n- Without proper `android:permission` or `android:readPermission` attributes,\n  any application can query and retrieve sensitive data.\n\nIf an attacker or a malicious app exploits this misconfiguration, they can\naccess or modify sensitive files without authorization.\n",
+        "text": "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    package=\"com.example.app\">\n\n    <application\n        android:allowBackup=\"true\"\n        android:theme=\"@style/AppTheme\">\n\n        <provider\n            android:name=\".InsecureContentProvider\"\n            android:authorities=\"com.example.app.provider\"\n            android:exported=\"true\"\n            android:grantUriPermissions=\"true\" />\n\n    </application>\n</manifest>\n"
+      },
+      "secure_code_example": {
+        "description": "The secure version restricts access to the Content Provider by:\n\n- Setting `android:exported=\"false\"` to **prevent external access**.\n- Using `android:permission=\"com.example.app.SECURE_PERMISSION\"` to enforce\n  authentication and limit access to trusted applications.\n- Explicitly defining `android:grantUriPermissions=\"false\"` unless required.\n\nThese changes ensure that only authorized apps with explicit permissions can\naccess the files exposed by this Content Provider.\n",
+        "text": "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    package=\"com.example.app\">\n\n    <application\n        android:allowBackup=\"true\"\n        android:theme=\"@style/AppTheme\">\n\n        <provider\n            android:name=\".SecureContentProvider\"\n            android:authorities=\"com.example.app.provider\"\n            android:exported=\"false\"\n            android:permission=\"com.example.app.SECURE_PERMISSION\"\n            android:grantUriPermissions=\"false\" />\n\n    </application>\n</manifest>\n"
+      },
+      "steps": [
+        "Open the `AndroidManifest.xml` file.",
+        "Identify any `<provider>` components.",
+        "Set `android:exported=\"false\"` unless external access is explicitly required.",
+        "If external access is necessary, enforce permission controls using `android:permission`.",
+        "Avoid using `android:grantUriPermissions=\"true\"` unless strictly needed."
+      ]
+    },
+    "last_update_time": "04/03/2025"
+  },
+  {
+    "vulnerability_id": "346",
+    "title": "Excessive privileges - Mobile App",
+    "context": [
+      "Usage of Android development for mobile applications",
+      "Ensuring that applications request only the necessary permissions"
+    ],
+    "need": "Restrict application permissions to the minimum required for functionality",
+    "solution": {
+      "language": "android",
+      "insecure_code_example": {
+        "description": "The above `AndroidManifest.xml` file defines excessive permissions that\nare not required for the core functionality of the application.\n\n- `READ_SMS` allows reading SMS messages, which is sensitive data.\n- `WRITE_EXTERNAL_STORAGE` enables writing to external storage, which can\n  be exploited for data exfiltration.\n- `RECORD_AUDIO` allows capturing microphone input, which could be used for\n  eavesdropping.\n\nIf an attacker gains control over the app or exploits a vulnerability, these\nexcessive permissions could be abused to access private user data.\n",
+        "text": "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    package=\"com.example.app\">\n\n    <uses-permission android:name=\"android.permission.READ_SMS\" />\n    <uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" />\n    <uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n\n    <application\n        android:allowBackup=\"true\"\n        android:theme=\"@style/AppTheme\">\n        <activity android:name=\".MainActivity\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n"
+      },
+      "secure_code_example": {
+        "description": "The secure code ensures that only the **necessary** permissions are granted.\nIf the application does not require access to SMS, external storage, or\nmicrophone input, these permissions should be **removed**.\n\nBefore adding any permission, ensure that it is essential for the app's\nfunctionality and follows the **principle of least privilege**.\n",
+        "text": "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    package=\"com.example.app\">\n\n    <!-- Only essential permissions should be included -->\n    <uses-permission android:name=\"android.permission.INTERNET\" />\n\n    <application\n        android:allowBackup=\"true\"\n        android:theme=\"@style/AppTheme\">\n        <activity android:name=\".MainActivity\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n"
+      },
+      "steps": [
+        "Open the `AndroidManifest.xml` file.",
+        "Review all `<uses-permission>` entries and remove any unnecessary ones.",
+        "Ensure that permissions align with the app's core functionality.",
+        "Test the app to confirm that it works correctly with the minimum required permissions."
+      ]
+    },
+    "last_update_time": "04/03/2025"
+  }
+]
