@@ -1,4 +1,5 @@
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -13,13 +14,13 @@ class RequirementLang(BaseModel):
 
 class RequirementOut(BaseModel):
     id: str
-    category: Optional[str]
-    en: Optional[RequirementLang] = None
-    es: Optional[RequirementLang] = None
-    supported_in: Optional[Dict[str, Optional[bool]]]
-    references: List[str]
-    metadata: Dict[str, Any]
-    last_update_time: Optional[str]
+    category: str | None
+    en: RequirementLang | None = None
+    es: RequirementLang | None = None
+    supported_in: dict[str, bool | None] | None
+    references: list[str]
+    metadata: dict[str, Any]
+    last_update_time: str | None
 
 
 # --------------------
@@ -28,21 +29,21 @@ class RequirementOut(BaseModel):
 class ComplianceDefinition(BaseModel):
     id: str
     title: str
-    link: Optional[str] = None
+    link: str | None = None
 
 
 class ComplianceLang(BaseModel):
-    summary: Optional[str] = None
+    summary: str | None = None
 
 
 class ComplianceOut(BaseModel):
     id: str
     title: str
-    en: Optional[ComplianceLang] = None
-    es: Optional[ComplianceLang] = None
-    definitions: List[ComplianceDefinition]
-    metadata: Dict[str, Any]
-    last_update_time: Optional[str]
+    en: ComplianceLang | None = None
+    es: ComplianceLang | None = None
+    definitions: list[ComplianceDefinition]
+    metadata: dict[str, Any]
+    last_update_time: str | None
 
 
 # --------------------
@@ -57,88 +58,101 @@ class VulnerabilityLang(BaseModel):
 
 
 class VulnerabilityExamples(BaseModel):
-    non_compliant: Optional[str] = None
-    compliant: Optional[str] = None
+    non_compliant: str | None = None
+    compliant: str | None = None
 
 
 class VulnerabilityScoreBase(BaseModel):
-    attack_vector: Optional[str] = None
-    attack_complexity: Optional[str] = None
-    privileges_required: Optional[str] = None
-    user_interaction: Optional[str] = None
-    scope: Optional[str] = None
-    confidentiality: Optional[str] = None
-    integrity: Optional[str] = None
-    availability: Optional[str] = None
+    attack_vector: str | None = None
+    attack_complexity: str | None = None
+    privileges_required: str | None = None
+    user_interaction: str | None = None
+    scope: str | None = None
+    confidentiality: str | None = None
+    integrity: str | None = None
+    availability: str | None = None
 
 
 class VulnerabilityScoreTemporal(BaseModel):
-    exploit_code_maturity: Optional[str] = None
-    remediation_level: Optional[str] = None
-    report_confidence: Optional[str] = None
+    exploit_code_maturity: str | None = None
+    remediation_level: str | None = None
+    report_confidence: str | None = None
 
 
 class VulnerabilityScore(BaseModel):
-    base: Optional[VulnerabilityScoreBase] = None
-    temporal: Optional[VulnerabilityScoreTemporal] = None
+    base: VulnerabilityScoreBase | None = None
+    temporal: VulnerabilityScoreTemporal | None = None
 
 
 class VulnerabilityScoreV4Base(BaseModel):
-    attack_vector: Optional[str] = None
-    attack_complexity: Optional[str] = None
-    attack_requirements: Optional[str] = None
-    privileges_required: Optional[str] = None
-    user_interaction: Optional[str] = None
-    confidentiality_vc: Optional[str] = None
-    integrity_vi: Optional[str] = None
-    availability_va: Optional[str] = None
-    confidentiality_sc: Optional[str] = None
-    integrity_si: Optional[str] = None
-    availability_sa: Optional[str] = None
+    attack_vector: str | None = None
+    attack_complexity: str | None = None
+    attack_requirements: str | None = None
+    privileges_required: str | None = None
+    user_interaction: str | None = None
+    confidentiality_vc: str | None = None
+    integrity_vi: str | None = None
+    availability_va: str | None = None
+    confidentiality_sc: str | None = None
+    integrity_si: str | None = None
+    availability_sa: str | None = None
 
 
 class VulnerabilityScoreV4Threat(BaseModel):
-    exploit_maturity: Optional[str] = None
+    exploit_maturity: str | None = None
 
 
 class VulnerabilityScoreV4(BaseModel):
-    base: Optional[VulnerabilityScoreV4Base] = None
-    threat: Optional[VulnerabilityScoreV4Threat] = None
+    base: VulnerabilityScoreV4Base | None = None
+    threat: VulnerabilityScoreV4Threat | None = None
 
 
 class VulnerabilityOut(BaseModel):
     id: str
-    category: Optional[str]
-    en: Optional[VulnerabilityLang] = None
-    es: Optional[VulnerabilityLang] = None
-    examples: Optional[VulnerabilityExamples] = None
-    remediation_time: Optional[str] = None
-    score: Optional[VulnerabilityScore] = None
-    score_v4: Optional[VulnerabilityScoreV4] = None
-    requirements: List[str]
-    metadata: Dict[str, Any]
-    last_update_time: Optional[str]
+    category: str | None
+    en: VulnerabilityLang | None = None
+    es: VulnerabilityLang | None = None
+    examples: VulnerabilityExamples | None = None
+    remediation_time: str | None = None
+    score: VulnerabilityScore | None = None
+    score_v4: VulnerabilityScoreV4 | None = None
+    requirements: list[str]
+    metadata: dict[str, Any]
+    last_update_time: str | None
 
 
 # --------------------
 # Solutions models
 # --------------------
 class SolutionCodeExample(BaseModel):
-    description: Optional[str] = None
-    text: Optional[str] = None
+    description: str | None = None
+    text: str | None = None
 
 
 class SolutionDetails(BaseModel):
-    language: Optional[str] = None
+    language: str | None = None
     insecure_code_example: SolutionCodeExample = SolutionCodeExample()
     secure_code_example: SolutionCodeExample = SolutionCodeExample()
-    steps: List[str] = []
+    steps: list[str] = []
 
 
 class SolutionOut(BaseModel):
     vulnerability_id: str
     title: str
-    context: List[str]
+    context: list[str]
     need: str
     solution: SolutionDetails
-    last_update_time: Optional[str] = None
+    last_update_time: str | None = None
+
+
+# --------------------
+# Solutions index models
+# --------------------
+class SolutionsIndexItem(BaseModel):
+    name: str
+    count: int | None = None
+    error: str | None = None
+
+
+class SolutionsIndexOut(BaseModel):
+    datasets: list[SolutionsIndexItem]
