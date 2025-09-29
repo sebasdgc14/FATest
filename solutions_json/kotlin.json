@@ -1,0 +1,60 @@
+[
+  {
+    "vulnerability_id": "234",
+    "title": "Technical information leak - Stacktrace",
+    "context": [
+      "Usage of Kotlin for building modern and scalable applications",
+      "Usage of javax.servlet for creating Kotlin web applications with Servlets",
+      "Usage of java.io for input and output operations in Kotlin programming"
+    ],
+    "need": "Prevention of technical information leakage from system error traces",
+    "solution": {
+      "language": "kotlin",
+      "insecure_code_example": {
+        "description": "The following Kotlin servlet contains a security vulnerability that leads to technical information leakage through stack traces.\n\nIn the `doGet` method, an exception is intentionally thrown to simulate a scenario where an error occurs. The catch block then prints the stack trace directly to the HTTP response using `e.printStackTrace(response.writer)`. \n\nThis is a serious issue because the stack trace exposes internal details of the application, such as class names, method signatures, and even system properties. If an attacker can trigger this error, they could gather useful information about the system to plan further attacks.\n\nTo mitigate this risk, the exception should be logged securely instead of being exposed to the user.",
+        "text": "import javax.servlet.*\nimport javax.servlet.http.*\nimport java.io.IOException\n\nclass VulnerableServlet : HttpServlet() {\n\n    @Throws(ServletException::class, IOException::class)\n    override fun doGet(request: HttpServletRequest, response: HttpServletResponse) {\n        try {\n            // some risky operation\n            throw Exception(\"This is a forced exception\")\n        } catch (e: Exception) {\n            e.printStackTrace(response.writer)\n        }\n    }\n}"
+      },
+      "secure_code_example": {
+        "description": "The secure version of the code properly handles errors and prevents technical information leakage. Key improvements include:\n\n1. **Preventing stack trace exposure:** The `e.printStackTrace(response.writer)` line is removed to avoid leaking internal system details.\n\n2. **Implementing proper logging:** A `Logger` instance is used to record exceptions securely on the server side.\n\n3. **Using a generic error message:** Instead of showing detailed error information to the client, a standardized error response is sent.\n\n4. **Ensuring centralized error handling:** Logging is handled in a consistent way, making debugging easier while improving security.\n\n5. **Keeping sensitive information private:** Error details remain in server logs instead of being exposed to users.",
+        "text": "import javax.servlet.*\nimport javax.servlet.http.*\nimport java.io.IOException\nimport java.util.logging.Level\nimport java.util.logging.Logger\n\nclass SecureServlet : HttpServlet() {\n\n    companion object {\n        private val LOGGER = Logger.getLogger(SecureServlet::class.java.name)\n    }\n\n    @Throws(ServletException::class, IOException::class)\n    override fun doGet(request: HttpServletRequest, response: HttpServletResponse) {\n        try {\n            // some risky operation\n            throw Exception(\"This is a forced exception\")\n        } catch (e: Exception) {\n            LOGGER.log(Level.SEVERE, e.message, e)\n            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, \"An error occurred while processing your request. Please try again later.\")\n        }\n    }\n}"
+      },
+      "steps": [
+        "Avoid printing stack traces directly to the response.",
+        "Implement proper error handling and logging mechanisms.",
+        "Catch the exception and handle it appropriately instead of printing the stack trace.",
+        "Consider using a centralized error handling mechanism to handle exceptions consistently across the application.",
+        "Ensure that sensitive technical information is not exposed to the user in error messages or logs."
+      ]
+    },
+    "last_update_time": "04/01/2025"
+  },
+  {
+    "vulnerability_id": "142",
+    "title": "Sensitive information in source code - API Key",
+    "context": [
+      "Usage of Kotlin for developing secure and modern applications",
+      "Usage of javax.servlet-api for Kotlin Servlet development"
+    ],
+    "need": "Secure storage and retrieval of sensitive information, such as API keys, in source code",
+    "solution": {
+      "language": "kotlin",
+      "insecure_code_example": {
+        "description": "In the code below, a Kotlin `HttpServlet` named `AppServlet` contains a hardcoded API key.\n\nThe API key is defined as a constant inside the class, making it easily accessible to anyone with access to the source code.\nIf this code is shared or pushed to a public repository, the key could be exposed, leading to potential security threats.\n\nTo mitigate this risk, sensitive information should never be stored in the source code. Instead, it should be retrieved from a secure source, such as an environment variable or a secret management system.",
+        "text": "import javax.servlet.*\nimport javax.servlet.http.*\nimport java.io.IOException\n\nclass AppServlet : HttpServlet() {\n    companion object {\n        private const val API_KEY = \"1234567890abcdef\" // Hardcoded sensitive information\n    }\n\n    @Throws(ServletException::class, IOException::class)\n    override fun doGet(request: HttpServletRequest, response: HttpServletResponse) {\n        // Use the API key (not recommended)\n    }\n}"
+      },
+      "secure_code_example": {
+        "description": "The secure version of this code retrieves the API key from an environment variable instead of hardcoding it in the source code.\n\n- The `init()` method initializes the API key by retrieving it from the environment.\n- If the key is not set, the servlet throws an exception to prevent execution without a valid key.\n- This approach ensures that the API key is not stored in the source code and can be changed without modifying the application.\n\nTo set the API key in a UNIX-based system:\n```bash\nexport API_KEY=your_api_key\n```\nIn Windows:\n```cmd\nsetx API_KEY \"your_api_key\"\n```",
+        "text": "import javax.servlet.*\nimport javax.servlet.http.*\nimport java.io.IOException\n\nclass SecureAppServlet : HttpServlet() {\n    private lateinit var apiKey: String\n\n    @Throws(ServletException::class)\n    override fun init() {\n        apiKey = System.getenv(\"API_KEY\") ?: throw ServletException(\"API_KEY not set in environment variables\")\n    }\n\n    @Throws(ServletException::class, IOException::class)\n    override fun doGet(request: HttpServletRequest, response: HttpServletResponse) {\n        // Use the API key securely\n    }\n}"
+      },
+      "steps": [
+        "Remove sensitive information (API key) from the source code.",
+        "Store the API key in a secure location, such as an environment variable.",
+        "Update the code to retrieve the API key at runtime.",
+        "Ensure the secure location is accessible only to authorized users or processes.",
+        "Consider using encryption or a secrets manager for enhanced security.",
+        "Regularly review and update security measures to protect sensitive information."
+      ]
+    },
+    "last_update_time": "04/02/2025"
+  }
+]

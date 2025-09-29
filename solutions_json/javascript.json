@@ -1,0 +1,85 @@
+[
+  {
+    "vulnerability_id": "079",
+    "title": "Non-upgradable dependencies",
+    "context": [
+      "Usage of JavaScript for developing modern web applications",
+      "Dependency management using npm or yarn for package installation"
+    ],
+    "need": "Prevent security vulnerabilities arising from dependencies that cannot be upgraded",
+    "solution": {
+      "language": "javascript",
+      "insecure_code_example": {
+        "description": "Dependencies are downloaded and added directly to the project without using a version manager.\n\nIn this example, the node_modules folder with three dependencies was added to the project, but there is no package.json file.",
+        "text": "/my-project\n  │── /node_modules  <-- 🚨 Dependencies added to the project\n  │   ├── lodash/\n  │   ├── express/\n  │   └── axios/\n  │── index.js"
+      },
+      "secure_code_example": {
+        "description": "Dependencies are defined in a package.json file so that a package manager like npm or yarn can track them and identify if they need updates.\n\nAdditionally, the node_modules folder is excluded in the .gitignore file to prevent it from being added to the repository. When cloning the repository, dependencies must be installed using npm install.",
+        "text": "/my-project\n  │── .gitignore\n    node_modules/\n  │── package.json\n     {\n       \"dependencies\": {\n         \"lodash\": \"^4.17.21\",\n         \"express\": \"^4.19.2\",\n         \"axios\": \"^1.4.0\"\n       }\n     }"
+      },
+      "steps": [
+        "Identify all the dependencies used in the code",
+        "List all dependencies explicitly in the package.json file to allow proper version control and tracking",
+        "Use version ranges (e.g., ^ or ~) instead of fixed versions to allow safe updates",
+        "Regularly update the dependencies to the latest versions to ensure security patches and bug fixes are applied",
+        "Consider using a dependency management tool to automate the process of managing and updating dependencies"
+      ]
+    },
+    "last_update_time": "03/31/2025"
+  },
+  {
+    "vulnerability_id": "117",
+    "title": "Unverifiable files",
+    "context": [
+      "Usage of JavaScript for developing modern web applications",
+      "The repository stores files that cannot be verified because their content is not compatible with their extension",
+      "The repository stores files that cannot be verified because their content is opaque and difficult to inspect."
+    ],
+    "need": "Ensure verifiability of files in the repository",
+    "solution": {
+      "language": "javascript",
+      "insecure_code_example": {
+        "description": "In this example, we have a repository with an \"static/\" directory in which we have files\nthat cannot be verified by scanners because the content is obfuscated or does not correspond to its extension.",
+        "text": "/my-project\n  │── /static/\n    jquery.min.js\n    MyProgram.class\n    maven.wrapper.jar\n  │── /src/\n    main.js\n    index.html"
+      },
+      "secure_code_example": {
+        "description": "In this case, uncheckable files were ignored in the .gitignore file to prevent them from being uploaded to the repository.",
+        "text": "/my-project\n  │── .gitignore\n    static/.*.min.js\n    static/.*.class\n    static/.*.jar\n  │── /src/\n    main.js\n    index.html\n  │── /static/\n    jquery.min.js\n    MyProgram.class\n    maven.wrapper.jar"
+      },
+      "steps": [
+        "Validate the file extension before saving it to the repository",
+        "Filter out files that cannot be verified by scanners"
+      ]
+    },
+    "last_update_time": "03/31/2025"
+  },
+  {
+    "vulnerability_id": "237",
+    "title": "Technical information leak - Print Functions",
+    "context": [
+      "Usage of JavaScript for building web applications",
+      "Usage of Express.js for handling HTTP requests and responses",
+      "Usage of console functions for debugging purposes"
+    ],
+    "need": "Protection of sensitive information by removing or disabling console logging in production environment",
+    "solution": {
+      "language": "javascript",
+      "insecure_code_example": {
+        "description": "In the provided code snippet, we have an Express.js application that defines a simple route using the `app.get` method. Inside the route handler, a try-catch block is used to handle potential errors.\n\nThe vulnerability lies in the `catch` block, where we use `console.error(err)`. This method prints the error details, including stack traces, to the console. While useful during development for debugging, this can lead to sensitive information leakage in a production environment.\n\nAttackers may deliberately trigger errors to extract information about the application's internal structure, such as file paths, dependencies, and API details. This can help them craft targeted attacks.\n\nTo fix this vulnerability, it is recommended to use a logging framework like `winston` or `pino` to store error logs securely. Logs should be properly secured, monitored, and should not contain sensitive data.",
+        "text": "const express = require('express');\nconst app = express();\n\napp.get('/', (req, res) => {\n    try {\n        // Some code that might throw an error\n    } catch (err) {\n        console.error(err);  // This is the vulnerability!\n    }\n});\n\napp.listen(3000, () => {\n    console.log('Server running on port 3000');\n});"
+      },
+      "secure_code_example": {
+        "description": "The original code was vulnerable due to the use of `console.error(err)`, which could potentially expose sensitive information about the application's internals. This is especially risky in a production environment.\n\nThe revised code mitigates this risk by replacing `console.error(err)` with a structured logging approach using the `winston` library, a widely used logging framework for Node.js applications.\n\nA `logger` instance is created with different logging levels, allowing for better control over log messages. Instead of directly logging to the console, errors are logged securely with `logger.error()`. This ensures that sensitive information is not exposed in production logs.\n\nBy using a logging framework, logs can be directed to secure storage, access-controlled, and monitored for unusual activity, reducing the risk of information leaks.",
+        "text": "const express = require('express');\nconst winston = require('winston');\n\nconst app = express();\nconst logger = winston.createLogger({\n    level: 'error',\n    format: winston.format.json(),\n    transports: [\n        new winston.transports.File({ filename: 'error.log' })\n    ]\n});\n\napp.get('/', (req, res) => {\n    try {\n        // Some code that might throw an error\n    } catch (err) {\n        logger.error('An error occurred', { error: err.message });\n    }\n});\n\napp.listen(3000, () => {\n    console.log('Server running on port 3000');\n});"
+      },
+      "steps": [
+        "Remove or comment out direct console logging (e.g., console.log, console.error) in production code.",
+        "Use a structured logging framework such as `winston` or `pino` to securely handle logs.",
+        "Ensure that logged error messages do not expose sensitive details.",
+        "Store logs securely and restrict access to authorized personnel.",
+        "Regularly review logs for security monitoring and anomaly detection."
+      ]
+    },
+    "last_update_time": "04/02/2025"
+  }
+]

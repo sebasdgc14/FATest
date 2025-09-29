@@ -1,0 +1,2344 @@
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need:
+    Enhancement of role-based access control to prevent unauthorized privilege
+    escalation
+  solution:
+    insecure_code_example:
+      description:
+        "The above CloudFormation template for AWS infrastructure has a critical\
+        \ security vulnerability that could lead to a privilege escalation attack.\
+        \ \n\nThe vulnerability lies in the way the IAM user and group are configured.\
+        \ The \"StandardUser\" resource creates a user with the name \"standard_user\"\
+        . This user is meant to have standard privileges and should not have administrative\
+        \ access.\n\nHowever, the \"AdminGroup\" resource creates a group with\
+        \ the name \"admin_group\". This group is meant for users with administrative\
+        \ privileges.\n\nThe critical part is the \"AddUserToAdminGroup\" resource.\
+        \ This resource adds the \"standard_user\" to the \"admin_group\". This means\
+        \ that even though \"standard_user\" should only have standard privileges,\
+        \ they are given administrative privileges because they are part of the \"\
+        admin_group\".\n\nThis insecure role configuration allows any user with access\
+        \ to the \"standard_user\" account to potentially obtain administrative access\
+        \ or privileges, which could lead to unauthorized actions, data breaches,\
+        \ or other security incidents."
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          StandardUser:
+            Type: AWS::IAM::User
+            Properties:
+              UserName: standard_user
+              Path: "/"
+
+          AdminGroup:
+            Type: AWS::IAM::Group
+            Properties:
+              GroupName: admin_group
+              Path: "/"
+
+          AddUserToAdminGroup:
+            Type: AWS::IAM::UserToGroupAddition
+            Properties:
+              GroupName: !Ref AdminGroup
+              Users:
+                - !Ref StandardUser
+    language: cloudformation
+    secure_code_example:
+      description:
+        "The original code was vulnerable to privilege escalation because\
+        \ it added a standard user to the admin group, effectively granting them administrative\
+        \ privileges. \n\nThe fixed code creates a new group called \"standard_group\"\
+        \ and adds the standard user to this group instead. This group is then associated\
+        \ with a policy that only allows the necessary permissions for a standard\
+        \ user, implementing the principle of least privilege. \n\nThe policy allows\
+        \ the standard user to describe EC2 instances but does not grant any other\
+        \ permissions. This ensures that the user cannot perform any actions that\
+        \ they should not be able to, such as modifying or deleting resources.\n\n\
+        This fix also involves creating a new IAM policy and attaching it to the standard\
+        \ group. This policy restricts the actions that the standard user can perform,\
+        \ further reducing the risk of privilege escalation.\n\nRemember to regularly\
+        \ review and audit IAM roles and permissions to ensure they are still necessary\
+        \ and appropriate. Enable multi-factor authentication (MFA) for privileged\
+        \ accounts and implement strong password policies. Regularly update and patch\
+        \ the infrastructure components to protect against known vulnerabilities."
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          StandardUser:
+            Type: AWS::IAM::User
+            Properties:
+              UserName: standard_user
+              Path: "/"
+
+          StandardGroup:
+            Type: AWS::IAM::Group
+            Properties:
+              GroupName: standard_group
+              Path: "/"
+
+          AddUserToStandardGroup:
+            Type: AWS::IAM::UserToGroupAddition
+            Properties:
+              GroupName: !Ref StandardGroup
+              Users:
+                - !Ref StandardUser
+
+          StandardUserPolicy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyName: standard_user_policy
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Action: "ec2:Describe*"
+                    Resource: "*"
+              Groups:
+                - !Ref StandardGroup
+    steps:
+      - Implement the principle of least privilege by assigning only the necessary permissions
+        to each user or role.
+      - Avoid using default or overly permissive IAM roles.
+      - Regularly review and audit IAM roles and permissions to ensure they are still
+        necessary and appropriate.
+      - Enable multi-factor authentication (MFA) for privileged accounts.
+      - Implement strong password policies and enforce regular password rotation.
+      - Implement secure access controls and restrict access to sensitive resources.
+      - Implement proper logging and monitoring to detect and respond to any unauthorized
+        access attempts.
+      - Regularly update and patch the infrastructure components to protect against
+        known vulnerabilities.
+      - Educate users on best practices for security and the importance of protecting
+        their credentials.
+      - Implement a robust identity and access management (IAM) solution to manage user
+        roles and permissions.
+  title: Privilege escalation
+  vulnerability_id: "005"
+  last_update_time: 04/02/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS::ElasticLoadBalancingV2::Listener for managing load balancer listeners in AWS
+    - Usage of AWS::ElasticLoadBalancingV2::TargetGroup for managing target groups in AWS Load Balancer
+  need:
+    Implementation of secure encryption algorithms and disabling insecure TLS
+    protocol versions.
+  solution:
+    insecure_code_example:
+      description: |-
+        In the above CloudFormation template, we define a load balancer listener for an AWS Application Load Balancer. The listener is configured to listen on port 443 (HTTPS) and uses the `ELBSecurityPolicy-2015-05` SSL policy.
+
+        The vulnerability lies in the `SslPolicy` that is being used. The `ELBSecurityPolicy-2015-05` policy allows the usage of insecure TLS protocol versions, including TLS 1.0 and 1.1. These versions of the TLS protocol are known to be insecure and susceptible to various attacks, such as BEAST, CRIME, and POODLE.
+
+        This means that the data being transmitted between the client and the server could potentially be intercepted and decrypted by an attacker. This could lead to sensitive information being exposed, such as user credentials, credit card numbers, or other personal data.
+
+        To fix this vulnerability, the `SslPolicy` should be updated to use a more secure policy, such as `ELBSecurityPolicy-TLS-1-2-2017-01`, which only allows the usage of the secure TLS 1.2 protocol version.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          ExampleListener:
+            Type: AWS::ElasticLoadBalancingV2::Listener
+            Properties:
+              LoadBalancerArn: !Ref ExampleLoadBalancer
+              Port: 443
+              Protocol: HTTPS
+              SslPolicy: ELBSecurityPolicy-2015-05
+              DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref ExampleTargetGroup
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The above code is a fixed version of the vulnerable code. The vulnerability was that the server allowed the usage of insecure TLS protocol versions. This is a serious security issue as it can allow attackers to exploit the weak encryption and potentially gain unauthorized access to sensitive data.
+
+        The fix involves changing the `SslPolicy` from `ELBSecurityPolicy-2015-05` to `ELBSecurityPolicy-TLS-1-2-2017-01`. This change ensures that the server is now using a secure version of the TLS protocol, specifically TLSv1.2, which is currently considered secure.
+
+        The `ELBSecurityPolicy-TLS-1-2-2017-01` policy is a predefined policy by AWS which includes the secure TLSv1.2 protocol along with secure cipher suites. This policy will help protect the server from attacks that target weak protocols and ciphers.
+
+        Remember, it's important to regularly review and update your security configurations, as what is considered secure evolves over time.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          ExampleListener:
+            Type: AWS::ElasticLoadBalancingV2::Listener
+            Properties:
+              LoadBalancerArn: !Ref ExampleLoadBalancer
+              Port: 443
+              Protocol: HTTPS
+              SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
+              DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref ExampleTargetGroup
+    steps:
+      - Update the SSL/TLS protocol version to TLSv1.2 or TLSv1.3
+      - Ensure that the SSL/TLS configuration is using secure encryption algorithms
+      - Consider using a more secure SSL/TLS policy
+  title: Insecure encryption algorithm - SSL/TLS
+  vulnerability_id: "016"
+  last_update_time: 04/02/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS::EC2::SecurityGroup for managing network access in AWS
+  need: Enforce restricted access between network segments in AWS
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation code defines an AWS security group that allows unrestricted access to and from all IP addresses (0.0.0.0/0) on all ports (FromPort = -1, ToPort = -1) and for all protocols (IpProtocol = "-1"). This means that any machine, regardless of its location or network, can connect to the resources protected by this security group, and vice versa. This can lead to a potential security risk as it exposes the resources to unwanted traffic and potential attacks.
+
+        The `SecurityGroupIngress` property defines the inbound rules for connections to the resources, while the `SecurityGroupEgress` property defines the outbound rules for connections from the resources. The `CidrIp` attribute specifies the range of IP addresses that can connect to or from the resources. In this case, the range is set to `0.0.0.0/0`, which represents all possible IP addresses.
+
+        The `FromPort` and `ToPort` attributes define the range of ports that can be used for the connections. When both are set to `-1`, it means all ports are allowed. The `IpProtocol` attribute defines the network protocol for the connections, and when it is set to `-1`, it means all protocols are allowed.
+
+        This configuration is too permissive and goes against the principle of least privilege, which states that a user or system should have the minimum levels of access necessary to perform its function. Therefore, it's recommended to restrict the access to only the necessary IP addresses, ports, and protocols.
+      text: |-
+        Resources:
+          InsecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: "Allow all inbound and outbound traffic"
+              SecurityGroupIngress:
+                - IpProtocol: "-1"
+                  FromPort: -1
+                  ToPort: -1
+                  CidrIp: "0.0.0.0/0"
+              SecurityGroupEgress:
+                - IpProtocol: "-1"
+                  FromPort: -1
+                  ToPort: -1
+                  CidrIp: "0.0.0.0/0"
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The original code had a security group that allowed all inbound and outbound traffic, which is a significant security risk. The updated code restricts access to only the necessary network segments, ports, IP addresses, network protocols, and administrative services.
+
+        The `SecurityGroupIngress` property defines the inbound rules for network traffic. The `FromPort` and `ToPort` specify the port range for the rule, the `IpProtocol` specifies the protocol type for the rule, and the `CidrIp` specifies the range of source IP addresses for the rule.
+
+        Similarly, the `SecurityGroupEgress` property defines the outbound rules for network traffic. The `FromPort` and `ToPort` specify the port range for the rule, the `IpProtocol` specifies the protocol type for the rule, and the `CidrIp` specifies the range of destination IP addresses for the rule.
+
+        By limiting the access to only what's necessary, we significantly reduce the potential attack surface. It's important to regularly review and update these rules to ensure they meet the application's requirements and to identify any potential misconfigurations or unauthorized access.
+      text: |-
+        Resources:
+          SecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: "Allow only necessary inbound and outbound traffic"
+              SecurityGroupIngress:
+                - IpProtocol: "<required_protocol>"
+                  FromPort: <required_from_port>
+                  ToPort: <required_to_port>
+                  CidrIp: "<required_inbound_cidr_blocks>"
+              SecurityGroupEgress:
+                - IpProtocol: "<required_protocol>"
+                  FromPort: <required_from_port>
+                  ToPort: <required_to_port>
+                  CidrIp: "<required_outbound_cidr_blocks>"
+    steps:
+      - Review the current security group configuration.
+      - Identify the network segments, ports, IP addresses, network protocols, and administrative services that are required for the application.
+      - Update the security group configuration to only allow access from the necessary network segments, ports, IP addresses, network protocols, and administrative services.
+      - Remove the 'allow_all' rule that allows unrestricted access.
+      - Test the updated security group configuration to ensure it meets the application's requirements.
+      - Monitor and regularly review the security group configuration to identify any potential misconfigurations or unauthorized access.
+  title: Unrestricted access between network segments - AWS
+  vulnerability_id: "024"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Restriction of privileges to the minimum necessary level
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation template creates an IAM role (`IAMRole`) and attaches an inline policy to it. The IAM role allows EC2 service to assume it.
+
+        The vulnerability lies in the inline policy attached to the IAM role. The policy allows any action (`"Action": "*"`) on any resource (`"Resource": "*"`) in AWS. This means the role has excessive privileges and can perform any action on any resource in AWS.
+
+        This is a security risk because if the role's credentials are compromised, an attacker can execute any operation, potentially leading to unauthorized access, data leakage, or a full AWS account takeover.
+
+        The principle of least privilege is not followed here. This principle recommends that a user, program, or system process should have the minimum privileges necessary to complete its job. Overprivileged roles or users can lead to misuse, whether intentional (malicious insiders) or accidental (misuse of permissions).
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          IAMRole:
+            Type: AWS::IAM::Role
+            Properties:
+              RoleName: "iam_role"
+              AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      Service: "ec2.amazonaws.com"
+                    Action: "sts:AssumeRole"
+              Policies:
+                - PolicyName: "iam_role_policy"
+                  PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                      - Effect: Allow
+                        Action: "*"
+                        Resource: "*"
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The original template had a vulnerability where the IAM role had excessive privileges. The IAM role policy allowed all actions (`"Action": "*"`) on all resources (`"Resource": "*"`). This is a security risk as it violates the principle of least privilege.
+
+        The fixed CloudFormation template reduces the permissions of the IAM role to only what is necessary. The IAM role policy now only allows specific EC2 actions (`"Action": ["ec2:Describe*", "ec2:StartInstances", "ec2:StopInstances"]`) on specific EC2 instances (`"Resource": ["arn:aws:ec2:us-west-2:123456789012:instance/*"]`).
+
+        This ensures that the IAM role cannot perform actions or access resources beyond its scope, reducing the impact of potential credential compromise.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          IAMRole:
+            Type: AWS::IAM::Role
+            Properties:
+              RoleName: "iam_role"
+              AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      Service: "ec2.amazonaws.com"
+                    Action: "sts:AssumeRole"
+              Policies:
+                - PolicyName: "iam_role_policy"
+                  PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                      - Effect: Allow
+                        Action:
+                          - "ec2:Describe*"
+                          - "ec2:StartInstances"
+                          - "ec2:StopInstances"
+                        Resource:
+                          - "arn:aws:ec2:us-west-2:123456789012:instance/*"
+    steps:
+      - Review the permissions required by the application, user, or role.
+      - Identify the specific actions and resources that are necessary for the application to function properly.
+      - Remove the 'Allow' statement with the wildcard (*) in the IAM role policy.
+      - Replace the wildcard (*) with the specific actions and resources required by the application.
+      - Ensure that the permissions assigned to the role follow the principle of least privilege.
+      - Test the application to verify that it functions correctly with the updated permissions.
+  title: Excessive privileges - AWS
+  vulnerability_id: "031"
+  last_update_time: 04/03/2025
+- context:
+    - HTTP methods define how clients interact with a server, but some methods can introduce security risks if not properly restricted.
+    - Insecure HTTP methods such as `TRACE`, `PUT`, and `DELETE` can allow attackers to manipulate resources, perform cross-site tracing attacks, or introduce malicious content.
+    - CloudFormation templates may inadvertently allow all HTTP methods (`HttpMethod: \"*\"`) when defining API resources, exposing services to potential threats.
+  need: Restrict HTTP methods to only those necessary for the application's functionality to prevent security risks.
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation template defines an **AWS::Serverless::Api** resource where `MethodSettings` allows all HTTP methods (`HttpMethod: "*"`, equivalent to `ANY`).
+
+        Allowing all HTTP methods increases the risk of:
+        - Unauthorized file uploads (PUT)
+        - Accidental or malicious deletion of resources (DELETE)
+        - Cross-site tracing attacks (TRACE), which can be used to expose sensitive information.
+
+        This misconfiguration can lead to data manipulation or unauthorized actions on the API.
+      text: |-
+        Resources:
+          MyApi:
+            Type: AWS::Serverless::Api
+            Properties:
+              StageName: Prod
+              MethodSettings:
+                - ResourcePath: "/*"
+                  HttpMethod: "*"
+                  LoggingLevel: INFO
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The secure approach explicitly defines only the necessary HTTP methods (`GET` and `POST`), ensuring that potentially harmful methods such as `TRACE`, `PUT`, and `DELETE` are not exposed.
+
+        By restricting `MethodSettings`, the API enforces a more controlled access policy, reducing attack vectors.
+      text: |-
+        Resources:
+          MyApi:
+            Type: AWS::Serverless::Api
+            Properties:
+              StageName: Prod
+              MethodSettings:
+                - ResourcePath: "/secure"
+                  HttpMethod: "GET"
+                  LoggingLevel: INFO
+                - ResourcePath: "/secure"
+                  HttpMethod: "POST"
+                  LoggingLevel: INFO
+    steps:
+      - Identify API configurations that allow unrestricted HTTP methods.
+      - Review API settings (`MethodSettings` in AWS, similar configurations in other frameworks).
+      - Replace `HttpMethod: \"*\"` or equivalent settings with explicitly defined methods (e.g., `GET`, `POST`).
+      - Validate the configuration to ensure only intended methods are accessible.
+  title: Insecure HTTP methods enabled
+  vulnerability_id: "044"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Enhancement of authorization controls for web services - RDS
+  solution:
+    insecure_code_example:
+      description: |
+        The above CloudFormation template creates a MySQL RDS instance on AWS.
+        The `PubliclyAccessible` parameter is set to `true`, which means this RDS instance is accessible from the internet.
+        This is a significant security risk as it exposes the database to potential unauthorized access.
+
+        If the credentials for the database were to be compromised (e.g., through a brute force attack),
+        an attacker could gain full access to the data stored in the RDS instance.
+
+        The `AWS::RDS::DBInstance` resource block specifies the properties of the RDS instance.
+        The `PubliclyAccessible` parameter determines whether the RDS instance has a public IP address.
+        By setting this parameter to `true`, the RDS instance is assigned a public IP address and
+        can be accessed from outside of the VPC, which is not recommended for production environments
+        due to the associated security risks.
+
+        The `MasterUsername` and `MasterUserPassword` parameters specify the credentials used to connect to the RDS instance.
+        In this case, the credentials are hardcoded into the CloudFormation template,
+        which is also a bad practice as it exposes sensitive information in plain text.
+        This could lead to unauthorized access if the script were to be compromised.
+      text: |
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          MyDBInstance:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              DBInstanceIdentifier: mydb
+              AllocatedStorage: 20
+              DBInstanceClass: db.t2.micro
+              Engine: mysql
+              EngineVersion: "5.7"
+              MasterUsername: foo
+              MasterUserPassword: foobarbaz
+              DBParameterGroupName: default.mysql5.7
+              PubliclyAccessible: true
+    language: cloudformation
+    secure_code_example:
+      description: |
+        The above CloudFormation template creates a MySQL RDS instance on AWS.
+        The vulnerability in the original code was that the RDS instance was publicly accessible,
+        which could potentially compromise the stored information.
+
+        The fix for this vulnerability is to set the `PubliclyAccessible` attribute to `false`.
+        This ensures that the RDS instance is not publicly accessible over the internet,
+        and can only be accessed within the VPC it is deployed in.
+
+        In addition to this, it is also recommended to configure proper authentication
+        and authorization mechanisms for accessing the RDS instance.
+
+        This can be done by managing AWS IAM roles and policies,
+        and ensuring that only authenticated and authorized users and roles can access the RDS instance.
+
+        Please note that the `MasterUsername` and `MasterUserPassword` in the template should be replaced with secure values,
+        and should ideally be fetched from a secure secret management system instead of being hardcoded in the template.
+      text: |
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          MyDBInstance:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              DBInstanceIdentifier: mydb
+              AllocatedStorage: 20
+              DBInstanceClass: db.t2.micro
+              Engine: mysql
+              EngineVersion: "5.7"
+              MasterUsername: foo
+              MasterUserPassword: foobarbaz
+              DBParameterGroupName: default.mysql5.7
+              PubliclyAccessible: false
+    steps:
+      - Disable public accessibility for the RDS instance
+      - Configure proper authentication and authorization mechanisms for accessing the RDS instance
+      - Ensure that only authenticated and authorized users and roles can access the RDS instance
+  title: Improper authorization control for web services - RDS
+  vulnerability_id: "073"
+  last_update_time: 04/03/2025
+- context:
+    - AWS CloudFormation used for defining IAM policies
+    - Multi-Factor Authentication (MFA) is essential for secure access control
+
+  need: |
+    Ensure IAM policies enforce Multi-Factor Authentication (MFA) to prevent
+    unauthorized access and privilege escalation.
+
+  solution:
+    insecure_code_example:
+      description: |
+        This CloudFormation template defines an IAM role and policy that grants
+        permissions without requiring MFA. The policy allows all actions (`Action: "*"`)
+        without checking if MFA is enabled, making it vulnerable to credential theft.
+
+      text: |
+        Resources:
+          InsecureIAMRole:
+            Type: AWS::IAM::Role
+            Properties:
+              AssumeRolePolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      AWS: arn:aws:iam::123456789012:user/ExampleUser
+                    Action: sts:AssumeRole
+
+          InsecurePolicy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyDocument:
+                Statement:
+                  - Effect: Allow
+                    Action: "*"
+                    Resource: "*"
+
+    language: cloudformation
+
+    secure_code_example:
+      description: |
+        This version enforces MFA by **denying access to users who have not
+        authenticated with MFA** using the condition `aws:MultiFactorAuthPresent: false`.
+
+      text: |
+        Resources:
+          SecurePolicy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyDocument:
+                Statement:
+                  - Effect: Deny
+                    Action: "*"
+                    Resource: "*"
+                    Condition:
+                      BoolIfExists:
+                        aws:MultiFactorAuthPresent: false
+                  - Effect: Allow
+                    Action: "*"
+                    Resource: "*"
+
+    steps:
+      - Add an IAM policy condition to deny access without MFA
+      - Require MFA for IAM users and roles
+      - Test authentication flows to verify MFA enforcement
+
+  title: Lack of multi-factor authentication
+  vulnerability_id: "081"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Ensuring data security in Amazon S3 buckets
+
+  need: Enforcement of Server-Side Encryption for all S3 buckets
+
+  solution:
+    insecure_code_example:
+      description: |
+        In this CloudFormation template, an S3 bucket is created with the `AccessControl`
+        set to `Private`, restricting public access. However, there is no configuration
+        for `BucketEncryption`, meaning that Server-Side Encryption (SSE) is not enabled.
+
+        Without SSE, data stored in the S3 bucket remains unencrypted at rest, making it
+        vulnerable to unauthorized access and data breaches. If an attacker gains access
+        to the S3 bucket, they could retrieve unencrypted data.
+
+        To mitigate this risk, Server-Side Encryption should be enabled by adding the
+        `BucketEncryption` property and specifying the `SSEAlgorithm` as `"AES256"` or `"aws:kms"`.
+
+      text: |
+        Resources:
+          InsecureS3Bucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: my-bucket
+              AccessControl: Private
+              Tags:
+                - Key: Name
+                  Value: MyBucket
+                - Key: Environment
+                  Value: Dev
+
+    language: cloudformation
+
+    secure_code_example:
+      description: |
+        This revised CloudFormation template includes the `BucketEncryption` property
+        to enforce Server-Side Encryption (SSE).
+
+        The `ServerSideEncryptionConfiguration` block defines a rule that applies
+        encryption by default using the `AES256` algorithm. This ensures that all objects
+        stored in the bucket are encrypted at rest.
+
+        The `Tags` property remains unchanged, as it is used to assign metadata to the
+        S3 bucket.
+
+        Applying this updated configuration will enforce encryption for all new objects
+        stored in the bucket, enhancing data security and compliance.
+
+      text: |
+        Resources:
+          SecureS3Bucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: my-bucket
+              AccessControl: Private
+              BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                  - ServerSideEncryptionByDefault:
+                      SSEAlgorithm: AES256
+              Tags:
+                - Key: Name
+                  Value: MyBucket
+                - Key: Environment
+                  Value: Dev
+
+    steps:
+      - Modify the CloudFormation template to include the `BucketEncryption` property.
+      - Set the `ServerSideEncryptionByDefault` block to specify an encryption method.
+      - Choose the appropriate server-side encryption method, such as SSE-S3 (`AES256`)
+        or SSE-KMS (`aws:kms`), based on security requirements.
+      - Deploy the updated CloudFormation template to enforce encryption for all objects
+        stored in the S3 bucket.
+
+  title: Non-encrypted confidential information - S3 Server Side Encryption
+  vulnerability_id: "099"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS::RDS::DBInstance for managing and interacting with AWS RDS database instances
+  need: Restrict access between network segments for RDS instances
+  solution:
+    insecure_code_example:
+      description: |-
+        The CloudFormation template below creates a publicly accessible AWS RDS instance
+        without specifying a database subnet group. The `PubliclyAccessible` property
+        is set to `true`, meaning the database instance is exposed to the internet.
+
+        This is a vulnerability because it allows unrestricted access between network
+        segments. Any public or private subnet can connect to the RDS instance without
+        any restrictions. This could potentially lead to unauthorized access to
+        sensitive data stored in the database.
+
+        Additionally, the lack of a defined database subnet group means that the RDS
+        instance is not associated with any specific subnets. This could lead to issues
+        with network routing and access control.
+
+        To mitigate this, a database subnet group should be explicitly defined, and
+        the `PubliclyAccessible` attribute should be set to `false` to ensure that
+        the instance is not publicly exposed.
+      text: |-
+        Resources:
+          MyDBInstance:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              DBInstanceIdentifier: "mydb"
+              AllocatedStorage: 20
+              StorageType: "gp2"
+              Engine: "mysql"
+              EngineVersion: "5.7"
+              DBInstanceClass: "db.t2.micro"
+              MasterUsername: "foo"
+              MasterUserPassword: "foobarbaz"
+              PubliclyAccessible: true
+              VPCSecurityGroups:
+                - !Ref MySecurityGroup
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The CloudFormation template below creates a Database Subnet Group using
+        the `AWS::RDS::DBSubnetGroup` resource, specifying the subnets that
+        should be used.
+
+        Then, it creates an RDS instance with the `PubliclyAccessible` property
+        set to `false`, ensuring that the database instance is not publicly accessible.
+
+        The `DBSubnetGroupName` property references the previously created database
+        subnet group, ensuring that the RDS instance is placed within a controlled
+        network environment.
+
+        Additionally, a security group is defined to restrict inbound access, ensuring
+        that only authorized internal network segments can reach the database.
+      text: |-
+        Resources:
+          MyDBSubnetGroup:
+            Type: AWS::RDS::DBSubnetGroup
+            Properties:
+              DBSubnetGroupDescription: "Database subnet group"
+              SubnetIds:
+                - subnet-xxxxxxxx
+                - subnet-yyyyyyyy
+
+          MySecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: "Restricted DB access"
+              VpcId: vpc-xxxxxxxx
+              SecurityGroupIngress:
+                - IpProtocol: "tcp"
+                  FromPort: 3306
+                  ToPort: 3306
+                  CidrIp: "10.0.0.0/16"  # Restricting access to internal network
+
+          MyDBInstance:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              DBInstanceIdentifier: "mydb"
+              AllocatedStorage: 20
+              StorageType: "gp2"
+              Engine: "mysql"
+              EngineVersion: "5.7"
+              DBInstanceClass: "db.t2.micro"
+              MasterUsername: "foo"
+              MasterUserPassword: "foobarbaz"
+              PubliclyAccessible: false
+              VPCSecurityGroups:
+                - !Ref MySecurityGroup
+              DBSubnetGroupName: !Ref MyDBSubnetGroup
+    steps:
+      - Create a Database Subnet Group in your AWS account.
+      - Specify the Database Subnet Group in the RDS resource configuration.
+      - Ensure that the RDS instance is not publicly accessible.
+      - Review and update the security group rules to restrict access to the RDS instance.
+  title: Unrestricted access between network segments - RDS
+  vulnerability_id: "109"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS Security Groups for network access control
+  need: Secure configuration of AWS security groups
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation template creates a security group that allows
+        all inbound and outbound traffic. This is a critical security misconfiguration
+        because it exposes associated resources to the public internet without any
+        restrictions.
+
+        The `SecurityGroupIngress` block allows any IP address (`0.0.0.0/0`) to
+        access any port using any protocol (`-1`, which means all protocols).
+        Similarly, the `SecurityGroupEgress` block allows unrestricted outbound
+        traffic to any destination.
+
+        This configuration violates the principle of least privilege, increasing
+        the risk of unauthorized access, data breaches, and potential exploitation
+        of vulnerabilities in exposed resources.
+      text: |-
+        Resources:
+          InsecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: "Allow all inbound and outbound traffic"
+              SecurityGroupIngress:
+                - IpProtocol: "-1"
+                  FromPort: 0
+                  ToPort: 0
+                  CidrIp: "0.0.0.0/0"
+              SecurityGroupEgress:
+                - IpProtocol: "-1"
+                  FromPort: 0
+                  ToPort: 0
+                  CidrIp: "0.0.0.0/0"
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The above CloudFormation template defines a security group with
+        restricted inbound and outbound access, following security best practices.
+
+        The `SecurityGroupIngress` block allows SSH (`port 22`) traffic only from
+        a specific IP range (`203.0.113.0/24`), reducing the risk of unauthorized
+        remote access.
+
+        The `SecurityGroupEgress` block allows outbound traffic only to HTTP
+        (`port 80`) within the same IP range, preventing unnecessary data exposure.
+
+        This approach follows the principle of least privilege, ensuring that only
+        necessary traffic is permitted while reducing the attack surface.
+      text: |-
+        Resources:
+          SecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: "Restricted inbound and outbound traffic"
+              SecurityGroupIngress:
+                - IpProtocol: "tcp"
+                  FromPort: 22
+                  ToPort: 22
+                  CidrIp: "203.0.113.0/24"
+              SecurityGroupEgress:
+                - IpProtocol: "tcp"
+                  FromPort: 80
+                  ToPort: 80
+                  CidrIp: "203.0.113.0/24"
+    steps:
+      - Restrict inbound traffic to only allow access from trusted IP ranges.
+      - Limit outbound traffic to only required destinations.
+      - Avoid using `0.0.0.0/0` for unrestricted access unless absolutely necessary.
+      - Regularly review and update security group rules to align with
+        security policies.
+      - Enable VPC Flow Logs and AWS CloudTrail to monitor access and detect
+        unauthorized traffic.
+  title: Insecure service configuration - AWS Security Groups
+  vulnerability_id: "165"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS native services to manage EC2 resources
+  need: Secure configuration of EC2 Security Groups
+  solution:
+    insecure_code_example:
+      description: |-
+        In the above CloudFormation template, an AWS EC2 instance is being created
+        without any security group associated with it. This is a major security
+        vulnerability as it means that the instance is not protected by any firewall
+        rules, allowing unrestricted access from the internet.
+
+        A Security Group acts as a virtual firewall for your instance to control
+        inbound and outbound traffic. When you launch an instance in a VPC, you must
+        associate it with at least one security group. If no security group is explicitly
+        defined, the default security group is used, which might have permissive rules.
+
+        In the provided code, there are no input/output rules defined for the EC2
+        instance, which could allow unauthorized access depending on the default
+        group's configuration. This is a serious security concern and should be
+        addressed immediately.
+      text: |-
+        Resources:
+          InsecureEC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              # No security group is defined
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The above CloudFormation template creates a security group named
+        "SecureSecurityGroup" with an inbound rule that allows TCP traffic on
+        port 22 (SSH) from any IP address (0.0.0.0/0), and an outbound rule that
+        allows all traffic.
+
+        The EC2 instance is then updated to associate this security group using
+        the `SecurityGroupIds` property. This ensures that the instance is protected
+        by defined network rules, reducing the risk of unauthorized access.
+      text: |-
+        Resources:
+          SecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: "Security Group with restricted access"
+              SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+                  CidrIp: 0.0.0.0/0
+              SecurityGroupEgress:
+                - IpProtocol: -1
+                  FromPort: 0
+                  ToPort: 0
+                  CidrIp: 0.0.0.0/0
+
+          SecureEC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              SecurityGroupIds:
+                - !Ref SecureSecurityGroup
+    steps:
+      - Identify the required inbound and outbound traffic for the EC2 instance.
+      - Create a new security group or use an existing one that meets the requirements.
+      - Define the inbound and outbound rules for the security group to allow
+        the necessary traffic.
+      - Reference the security group in the EC2 instance's `SecurityGroupIds`
+        property in the CloudFormation template.
+  title: Insecure service configuration - Security Groups
+  vulnerability_id: "177"
+  last_update_time: 04/03/2025
+- context:
+    - Risk of publicly exposed cloud storage resources
+    - Potential unauthorized access to files stored in cloud storage services
+  need: Prevent unauthorized access to cloud storage services configured with CloudFormation
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation template creates a cloud storage resource
+        (an Amazon S3 bucket) without enforcing any access restrictions.
+        Without explicit security configurations, the storage may allow public
+        or unauthenticated access.
+
+        This can lead to unauthorized users being able to list, read, modify,
+        or delete files, potentially exposing sensitive data or enabling data
+        tampering.
+      text: |-
+        Resources:
+          InsecureStorage:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: my-insecure-storage
+              AccessControl: PublicRead
+              # No restrictions on public access
+
+          InsecureFS:
+            Type: AWS::EFS::FileSystem
+            Properties:
+              FileSystemPolicy:
+                Statement:
+                  - Effect: Allow
+                    Principal: "*"
+                    Action: "elasticfilesystem:*"
+                    Resource: "*"
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The above CloudFormation template configures cloud storage services
+        with strict access control to prevent unauthorized access.
+
+        - S3: Blocks public access entirely and does not use permissive ACLs.
+        - EFS: Restricts access using IAM policies instead of open permissions.
+      text: |-
+        Resources:
+          SecureStorage:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: my-secure-storage
+              PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                IgnorePublicAcls: true
+                BlockPublicPolicy: true
+                RestrictPublicBuckets: true
+
+          SecureFS:
+            Type: AWS::EFS::FileSystem
+            Properties:
+              FileSystemPolicy:
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      AWS: "arn:aws:iam::123456789012:role/SecureAccessRole"
+                    Action: "elasticfilesystem:*"
+                    Resource: "*"
+    steps:
+      - Identify cloud storage resources managed by CloudFormation templates.
+      - Ensure public access is explicitly blocked (e.g., `PublicAccessBlockConfiguration` for S3).
+      - Use IAM policies instead of broad, open permissions in storage service configurations.
+      - Regularly review permissions to ensure that only authorized identities can access files.
+  title: Unauthorized access to files - Cloud Storage Services
+  vulnerability_id: "203"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Secure storage of confidential information in the database
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation template creates an AWS RDS instance
+        with a publicly accessible MySQL database. The database is configured
+        with a username and password, which are directly written in the
+        template as plaintext.
+
+        This poses a security risk since anyone with access to the
+        CloudFormation template can view the credentials. Additionally, the
+        database instance is publicly accessible, meaning it can be reached
+        from any IP address, making it susceptible to unauthorized access.
+
+        Furthermore, encryption at rest is not enabled, meaning sensitive
+        data stored in the database is unprotected. These misconfigurations
+        increase the risk of data breaches and unauthorized access.
+      text: |-
+        Resources:
+          InsecureDB:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              DBInstanceIdentifier: mydb
+              AllocatedStorage: 20
+              DBInstanceClass: db.t2.micro
+              Engine: mysql
+              EngineVersion: "5.7"
+              MasterUsername: admin
+              MasterUserPassword: my_password
+              PubliclyAccessible: true
+              StorageEncrypted: false
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The above CloudFormation template mitigates the security risks by:
+
+        1. **Disabling Public Access**: The `PubliclyAccessible` property is
+           set to `false` to ensure the database is only accessible within
+           the private network.
+        2. **Enabling Encryption at Rest**: The `StorageEncrypted` property is
+           set to `true` to ensure data stored in the database is encrypted.
+        3. **Using AWS Secrets Manager**: Instead of hardcoding credentials,
+           Secrets Manager is used to securely store and retrieve database
+           credentials.
+      text: |-
+        Resources:
+          SecureDB:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              DBInstanceIdentifier: mydb
+              AllocatedStorage: 20
+              DBInstanceClass: db.t2.micro
+              Engine: mysql
+              EngineVersion: "5.7"
+              MasterUsername: !Sub "{{resolve:secretsmanager:my_db_secret:SecretString:username}}"
+              MasterUserPassword: !Sub "{{resolve:secretsmanager:my_db_secret:SecretString:password}}"
+              PubliclyAccessible: false
+              StorageEncrypted: true
+              KmsKeyId: arn:aws:kms:us-west-2:123456789012:key/abcd1234-a123-456a-a12b-a123b4cd56ef
+
+          DBSecret:
+            Type: AWS::SecretsManager::Secret
+            Properties:
+              Name: my_db_secret
+              SecretString: !Sub |
+                {
+                  "username": "admin",
+                  "password": "securepassword123"
+                }
+    steps:
+      - Disable public access to the database to prevent unauthorized access.
+      - Enable encryption at rest to protect stored data.
+      - Use AWS Secrets Manager to securely store and manage database credentials.
+      - Implement IAM policies to restrict access to the database.
+  title: Non-encrypted confidential information - DB
+  vulnerability_id: "246"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Implementation of full disk encryption
+  solution:
+    insecure_code_example:
+      description: |-
+        The above code is a simple example of a CloudFormation template
+        that creates an AWS EC2 instance. The root volume is defined as
+        the primary disk for the instance. However, this code has a vulnerability—
+        the root volume is not encrypted.
+
+        The `BlockDeviceMappings` property defines the root volume configuration.
+        Here, it is set to a General Purpose SSD (`gp2`) with a size of 50GB.
+        However, there is no `Encrypted` property specified, which means the
+        volume is not encrypted.
+
+        This leaves any data stored on this disk unprotected and can be easily
+        accessed if the volume is compromised. This is a serious issue,
+        especially when the instance is storing sensitive customer data.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          EC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              BlockDeviceMappings:
+                - DeviceName: /dev/sda1
+                  Ebs:
+                    VolumeType: gp2
+                    VolumeSize: 50
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The updated code now includes encryption for the root volume
+        of the AWS EC2 instance. This is achieved by setting the `Encrypted`
+        property to `true`.
+
+        The `KmsKeyId` property has been added to specify a custom AWS KMS
+        key for encryption. Replace the placeholder value with the ARN of
+        your own KMS key. If you don't specify a custom KMS key, AWS will
+        use the default KMS key for EBS in your account.
+
+        By making these changes, the data stored on the root volume of the
+        AWS instance will be encrypted, thereby protecting sensitive customer data.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          EC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              BlockDeviceMappings:
+                - DeviceName: /dev/sda1
+                  Ebs:
+                    VolumeType: gp3
+                    VolumeSize: 50
+                    Encrypted: true
+                    KmsKeyId: arn:aws:kms:us-west-2:111122223333:key/abcd1234a1234dea4ec1234567890a12 # Replace with your KMS Key ARN
+    steps:
+      - Enable encryption for the root volume of the AWS EC2 instance.
+      - Specify the `Encrypted` property as `true` in the `BlockDeviceMappings` section.
+      - Consider using a custom AWS KMS key for encryption by specifying the `KmsKeyId` property.
+  title: Non-encrypted hard drives
+  vulnerability_id: "250"
+  last_update_time: 04/03/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need:
+    Implementation of safeguards to prevent accidental or unauthorized deletion
+    of databases in Amazon Web Services RDS.
+  solution:
+    insecure_code_example:
+      description: |-
+        This CloudFormation template creates an AWS RDS instance.
+        However, it lacks safeguards against accidental or unauthorized deletion.
+
+        Specifically:
+        - `DeletionProtection` is not enabled, which means the database can be
+          deleted without any restrictions.
+        - `SkipFinalSnapshot` is set to `true`, which prevents a final snapshot
+          from being created when the DB instance is deleted. This leads to
+          permanent loss of data if deleted.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          MyDBInstance:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              AllocatedStorage: 20
+              DBInstanceClass: db.t2.micro
+              Engine: mysql
+              EngineVersion: 5.7
+              MasterUsername: foo
+              MasterUserPassword: foobarbaz
+              DBName: mydb
+              StorageType: gp2
+              DBParameterGroupName: default.mysql5.7
+              SkipFinalSnapshot: true
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        This improved CloudFormation template addresses the risks by:
+
+        1. Setting `DeletionProtection` to `true`, preventing unintended deletion.
+        2. Setting `SkipFinalSnapshot` to `false`, ensuring a snapshot is taken
+           before deletion.
+        3. Defining `BackupRetentionPeriod` to `7` to allow recovery to a point
+           in time within the last 7 days.
+
+        These changes help mitigate accidental or malicious deletion and ensure
+        data recovery options are in place.
+      text: |-
+        AWSTemplateFormatVersion: '2010-09-09'
+        Resources:
+          MyDBInstance:
+            Type: AWS::RDS::DBInstance
+            Properties:
+              AllocatedStorage: 20
+              DBInstanceClass: db.t2.micro
+              Engine: mysql
+              EngineVersion: 5.7
+              MasterUsername: foo
+              MasterUserPassword: foobarbaz
+              DBName: mydb
+              StorageType: gp2
+              DBParameterGroupName: default.mysql5.7
+              SkipFinalSnapshot: false
+              DeletionProtection: true
+              BackupRetentionPeriod: 7
+    steps:
+      - Enable `DeletionProtection` in the RDS instance configuration.
+      - Ensure `SkipFinalSnapshot` is set to `false` to retain a snapshot.
+      - Enable backups by setting a `BackupRetentionPeriod`.
+      - Apply proper IAM access controls and enable monitoring via CloudTrail.
+  title: Lack of protection against deletion - RDS
+  vulnerability_id: "256"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS::ElasticLoadBalancing::LoadBalancer for managing and configuring
+      AWS Elastic Load Balancer
+  need: Enable Deletion Protection for Elastic Load Balancing
+  solution:
+    insecure_code_example:
+      description: >
+        The above CloudFormation template creates an Elastic Load Balancer (ELB)
+        in AWS without enabling the deletion protection feature. The ELB is configured
+        to listen on port 80 and distribute incoming traffic among availability zones
+        "us-west-2a", "us-west-2b", and "us-west-2c".
+
+        The vulnerability lies in the absence of the `DeletionProtection` attribute in
+        the resource properties. This allows the ELB to be deleted accidentally or
+        intentionally without restriction.
+
+        In a production environment, the deletion of an ELB can result in service
+        outages or loss of availability. To prevent this, it is recommended to enable
+        deletion protection by including the `DeletionProtection` property set to
+        `true` in the resource definition.
+      text: |
+        Resources:
+          MyLoadBalancer:
+            Type: AWS::ElasticLoadBalancing::LoadBalancer
+            Properties:
+              LoadBalancerName: example
+              AvailabilityZones:
+                - us-west-2a
+                - us-west-2b
+                - us-west-2c
+              Listeners:
+                - InstancePort: 80
+                  InstanceProtocol: HTTP
+                  LoadBalancerPort: 80
+                  Protocol: HTTP
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This CloudFormation template includes deletion protection for the ELB by
+        setting the `DeletionProtection` property to `true`. With this configuration,
+        the ELB cannot be deleted through the AWS Management Console, CLI, or API
+        unless the protection is explicitly removed.
+
+        Enabling deletion protection is a recommended best practice to prevent
+        accidental or unauthorized deletions that could disrupt services.
+      text: |
+        Resources:
+          MyLoadBalancer:
+            Type: AWS::ElasticLoadBalancing::LoadBalancer
+            Properties:
+              LoadBalancerName: example
+              AvailabilityZones:
+                - us-west-2a
+                - us-west-2b
+                - us-west-2c
+              DeletionProtection: true
+              Listeners:
+                - InstancePort: 80
+                  InstanceProtocol: HTTP
+                  LoadBalancerPort: 80
+                  Protocol: HTTP
+    steps:
+      - Identify the AWS Elastic Load Balancer (ELB) resource in your CloudFormation template.
+      - Check if the `DeletionProtection` property is present.
+      - If not, add the `DeletionProtection` property to the resource definition.
+      - Set the value to `true` to enable deletion protection.
+      - Deploy or update the stack to apply the changes.
+  title: Lack of protection against deletion - ELB
+  vulnerability_id: "258"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of AWS CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services (AWS) services
+  need: Implementation of data backup and recovery mechanisms for DynamoDB instances
+  solution:
+    insecure_code_example:
+      description: |
+        This code represents a DynamoDB table creation using CloudFormation. The
+        table is named "GameScores" and it has two attributes, "UserId" (numeric type)
+        and "GameTitle" (string type). The provisioned throughput is set to 20 read
+        and 20 write capacity units.
+
+        However, this code is vulnerable due to the lack of protection against deletion.
+        If the table is accidentally deleted, all the data it contains will be lost
+        permanently, as there are no recovery points in time configured.
+
+        The `AWS::DynamoDB::Table` resource doesn't have any settings for backup or
+        point-in-time recovery (PITR). This means that once the table is deleted,
+        there's no way to recover the data. This could lead to serious consequences,
+        especially if the table contains critical data.
+
+        To fix this vulnerability, it would be necessary to enable the point-in-time
+        recovery (PITR) option for the DynamoDB table. This can be done by adding the
+        `PointInTimeRecoverySpecification` property to the `AWS::DynamoDB::Table`
+        resource.
+      text: |-
+        Resources:
+          BasicDynamoDBTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+              TableName: GameScores
+              AttributeDefinitions:
+                - AttributeName: UserId
+                  AttributeType: N
+                - AttributeName: GameTitle
+                  AttributeType: S
+              KeySchema:
+                - AttributeName: UserId
+                  KeyType: HASH
+                - AttributeName: GameTitle
+                  KeyType: RANGE
+              ProvisionedThroughput:
+                ReadCapacityUnits: 20
+                WriteCapacityUnits: 20
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The updated code includes the `PointInTimeRecoverySpecification` block with
+        `PointInTimeRecoveryEnabled: true` in the `AWS::DynamoDB::Table` resource. This
+        enables point-in-time recovery (PITR) for the DynamoDB table, which provides
+        continuous backups of your table data for the last 35 days. This feature allows
+        you to restore the table to any point in time during the last 35 days.
+
+        This feature is crucial for protecting against accidental write or delete
+        operations. If any unintended DML operation occurs, you can restore the table
+        to a point in time before the operation took place.
+
+        In addition to enabling PITR, it's also recommended to regularly backup the
+        DynamoDB table to a separate storage solution and implement access controls to
+        prevent unauthorized deletion of the DynamoDB table. These steps provide
+        additional layers of protection for your data.
+      text: |-
+        Resources:
+          BasicDynamoDBTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+              TableName: GameScores
+              AttributeDefinitions:
+                - AttributeName: UserId
+                  AttributeType: N
+                - AttributeName: GameTitle
+                  AttributeType: S
+              KeySchema:
+                - AttributeName: UserId
+                  KeyType: HASH
+                - AttributeName: GameTitle
+                  KeyType: RANGE
+              ProvisionedThroughput:
+                ReadCapacityUnits: 20
+                WriteCapacityUnits: 20
+              PointInTimeRecoverySpecification:
+                PointInTimeRecoveryEnabled: true
+    steps:
+      - Enable point-in-time recovery for the DynamoDB table
+      - Configure the recovery window to retain data for a sufficient period of time
+      - Regularly backup the DynamoDB table to a separate storage solution
+      - Implement access controls to prevent unauthorized deletion of the DynamoDB table
+  title: Lack of protection against deletion - DynamoDB
+  vulnerability_id: "259"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Secure communication channels for data transmission in AWS
+  solution:
+    insecure_code_example:
+      description: >
+        In the above CloudFormation configuration, sensitive credentials such as
+        the AWS access key and secret key are embedded directly into the template.
+        This practice exposes those secrets to version control systems, unauthorized
+        viewers, and increases the risk of compromise.
+
+        Furthermore, there is no enforcement of secure communication between the
+        infrastructure client and AWS services. Without explicit mention of SSL/TLS
+        configuration or other secure transport methods, it is assumed that the
+        communication may occur over insecure channels, making it vulnerable to
+        Man-in-the-Middle (MitM) attacks and data interception.
+      text: |
+        Parameters:
+          AccessKey:
+            Type: String
+            Default: "my-access-key"
+          SecretKey:
+            Type: String
+            Default: "my-secret-key"
+
+        Resources:
+          MyEC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              Tags:
+                - Key: Name
+                  Value: example-instance
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This updated CloudFormation snippet avoids embedding sensitive credentials in
+        the template. Instead, credentials are assumed to be provided via IAM roles
+        assigned to the instance or injected securely through environment variables
+        or Secrets Manager, outside of the template itself.
+
+        Additionally, an encrypted EBS volume is configured for the instance to
+        protect data at rest. Secure communication with AWS services is implicitly
+        enforced when using the AWS SDKs and tools that default to HTTPS with TLS
+        encryption.
+
+        Best practices include using IAM roles for EC2 and encrypting all sensitive
+        data both at rest and in transit.
+      text: |
+        Resources:
+          MyEC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              Tags:
+                - Key: Name
+                  Value: example-instance
+              BlockDeviceMappings:
+                - DeviceName: /dev/xvda
+                  Ebs:
+                    VolumeSize: 8
+                    Encrypted: true
+    steps:
+      - Use HTTPS instead of HTTP for communication with AWS services
+      - Enable encryption in transit by configuring SSL/TLS for the communication channel
+      - Ensure that secure cipher suites and encryption protocols are used
+      - Implement mutual authentication to verify the identity of the remote end of the connection
+      - Avoid hardcoding access keys and secret keys in the code, instead use secure credential management solutions
+  title: Use of an insecure channel - Cloud Infrastructure
+  vulnerability_id: "281"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Configuration of services using TLS/SSL certificates
+  need: Ensure proper validation and configuration of X.509 certificates in AWS services
+  solution:
+    insecure_code_example:
+      description: >
+        In this CloudFormation example, an Application Load Balancer (ALB) is
+        configured with an HTTPS listener. However, the certificate configuration
+        does not enforce strict TLS policies, such as using a secure security policy,
+        nor does it validate the certificate chain or hostname.
+
+        If the load balancer is configured to accept all client certificates without
+        proper validation, it can expose backend services to man-in-the-middle (MitM)
+        attacks, allowing an attacker to present an invalid or self-signed certificate
+        and still have the connection accepted.
+      text: |
+        Resources:
+          MyLoadBalancer:
+            Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+            Properties:
+              Name: insecure-alb
+              Scheme: internet-facing
+              Subnets:
+                - subnet-12345678
+              Type: application
+
+          MyListener:
+            Type: AWS::ElasticLoadBalancingV2::Listener
+            Properties:
+              LoadBalancerArn: !Ref MyLoadBalancer
+              Port: 443
+              Protocol: HTTPS
+              Certificates:
+                - CertificateArn: arn:aws:acm:region:account:certificate/invalid-cert-id
+              DefaultActions:
+                - Type: fixed-response
+                  FixedResponseConfig:
+                    StatusCode: 200
+                    ContentType: text/plain
+                    MessageBody: "OK"
+    language: cloudformation
+    secure_code_example:
+      description: >
+        In this improved CloudFormation template, the HTTPS listener uses a valid ACM
+        certificate and enforces a secure TLS policy (`ELBSecurityPolicy-TLS-1-2-2021-06`).
+        This policy ensures that only strong ciphers and valid certificate chains are
+        accepted.
+
+        Additionally, by not allowing arbitrary client certificates and depending on
+        the ACM certificate validation process, the risk of MitM attacks is reduced.
+        If mutual TLS is needed, validation via trust store should also be configured
+        accordingly.
+      text: |
+        Resources:
+          MyLoadBalancer:
+            Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+            Properties:
+              Name: secure-alb
+              Scheme: internet-facing
+              Subnets:
+                - subnet-12345678
+              Type: application
+
+          MyListener:
+            Type: AWS::ElasticLoadBalancingV2::Listener
+            Properties:
+              LoadBalancerArn: !Ref MyLoadBalancer
+              Port: 443
+              Protocol: HTTPS
+              Certificates:
+                - CertificateArn: arn:aws:acm:region:account:certificate/valid-cert-id
+              SslPolicy: ELBSecurityPolicy-TLS-1-2-2021-06
+              DefaultActions:
+                - Type: fixed-response
+                  FixedResponseConfig:
+                    StatusCode: 200
+                    ContentType: text/plain
+                    MessageBody: "OK"
+    steps:
+      - Avoid using expired, self-signed, or untrusted X.509 certificates
+      - Enforce strict TLS policies with strong cipher suites and minimum protocol versions
+      - Use ACM or trusted CAs to manage certificates automatically
+      - If mutual TLS is required, validate client certificates against a trusted CA
+      - Monitor and rotate certificates before expiration
+  title: Insecure service configuration - Certificates
+  vulnerability_id: "313"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS IAM Roles for managing access and permissions in AWS services
+    - Usage of AWS IAM Role Policy for defining permissions and access control policies
+      for AWS IAM roles.
+  need: Restriction of privileges and removal of wildcard usage
+  solution:
+    insecure_code_example:
+      description: >
+        The above CloudFormation example creates an IAM role policy named
+        "excessive_privileges" associated with an IAM role. The policy allows all actions
+        ("*") on all resources ("*"), which is a violation of the principle of least privilege.
+
+        This configuration grants the IAM role unrestricted access to perform any action
+        on any AWS resource. This increases the risk of unintended or malicious operations,
+        such as unauthorized data access, data loss, or disruption of critical operations.
+
+        The use of wildcard characters in IAM policies should be avoided, as they can
+        grant permissions broader than intended. In this case, the wildcard `*` in both
+        "Action" and "Resource" fields makes this role too permissive.
+      text: |
+        Resources:
+          ExcessivePrivilegesPolicy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyName: excessive_privileges
+              Roles:
+                - Ref: ExampleRole
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Action: "*"
+                    Resource: "*"
+                    Effect: "Allow"
+    language: cloudformation
+    secure_code_example:
+      description: >
+        In the updated CloudFormation template, the IAM policy has been revised to remove
+        the use of wildcards. Instead of allowing any action on all resources, the policy
+        explicitly lists the required actions and specifies the exact resources the IAM role
+        should have access to. In this case, the role is granted the ability to list a specific
+        S3 bucket and retrieve objects from it.
+
+        This follows the principle of least privilege by limiting the permissions to only
+        what is necessary. It's important to regularly review IAM role policies to ensure they
+        do not have excessive permissions.
+      text: |
+        Resources:
+          RestrictedPrivilegesPolicy:
+            Type: AWS::IAM::Policy
+            Properties:
+              PolicyName: restricted_privileges
+              Roles:
+                - Ref: ExampleRole
+              PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                  - Action:
+                      - "s3:ListBucket"
+                      - "s3:GetObject"
+                    Resource:
+                      - arn:aws:s3:::example_bucket
+                      - arn:aws:s3:::example_bucket/*
+                    Effect: "Allow"
+    steps:
+      - Review the permissions required by the role and identify the specific actions
+        and resources that are necessary.
+      - Remove the wildcard (`*`) from the 'Action' field in the IAM role policy.
+      - Update the 'Resource' field in the IAM role policy to specify the exact resources
+        that the role should have access to.
+      - Ensure that the IAM role policy grants only the minimum required privileges.
+      - Regularly audit IAM role policies to confirm that they don't grant excessive privileges.
+  title: Excessive privileges - Wildcards
+  vulnerability_id: "325"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of AWS CloudFormation (IaC) to define infrastructure
+    - Definition of EC2 Security Groups using AWS::EC2::SecurityGroup
+    - Evaluation of ingress rules that permit communication over insecure channels
+  need: Detection and prevention of insecure communication protocols
+  solution:
+    insecure_code_example:
+      description: >
+        The CloudFormation resource below defines a security group that allows inbound traffic
+        over TCP port 23 (Telnet). This is an example of insecure communication because
+        Telnet transmits data—including authentication credentials—in plain text over the network.
+
+        Insecure channels refer to network protocols that do not provide encryption for
+        data in transit, such as HTTP, FTP, Telnet, and others. When these protocols are allowed,
+        attackers can intercept and read sensitive data using tools like packet sniffers.
+
+        This type of misconfiguration can enable Man-in-The-Middle (MITM) attacks,
+        session hijacking, and credential theft, especially when access is allowed from
+        any IP address (0.0.0.0/0).
+      text: |
+        Resources:
+          InsecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: Allow insecure Telnet access
+              SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 23
+                  ToPort: 23
+                  CidrIp: 0.0.0.0/0
+    language: cloudformation
+    secure_code_example:
+      description: >
+        The secure version avoids exposing the application to insecure communication protocols.
+        It replaces Telnet with secure alternatives like SSH (port 22) or uses HTTPS (port 443)
+        instead of HTTP. Additionally, it restricts access to known IP ranges to reduce the attack surface.
+
+        Ensuring the use of encrypted channels (e.g., TLS/SSL-based protocols) protects data
+        integrity and confidentiality during transmission and is a fundamental security practice.
+      text: |
+        Resources:
+          SecureSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: Allow secure access via HTTPS
+              SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 443
+                  ToPort: 443
+                  CidrIp: 203.0.113.0/24
+    steps:
+      - Identify all network-access rules defined in CloudFormation templates (e.g., in security groups, NACLs, or load balancers).
+      - Detect the use of insecure protocols such as Telnet (23), HTTP (80), FTP (21), etc.
+      - Replace insecure protocols with encrypted alternatives (e.g., HTTPS, SFTP, SSH).
+      - Restrict access using specific CIDR blocks instead of allowing traffic from all IPs (0.0.0.0/0).
+      - Document and justify any exception where insecure protocols are used, and apply compensating controls (e.g., VPN tunneling).
+  title: Insecure protocol allowed in security group
+  vulnerability_id: "332"
+  last_update_time: 04/04/2025
+  steps:
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS native service to manage infrastructure as code
+  need: Secure configuration of EC2 instances
+  solution:
+    insecure_code_example:
+      description: >
+        This CloudFormation template launches an EC2 instance without
+        a security group or key pair, exposing it publicly and making
+        it inaccessible securely.
+      text: |
+        Resources:
+          InsecureInstance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This template secures the instance by using a key pair for SSH,
+        a restrictive security group, and encrypted storage.
+      text: |
+        Parameters:
+          KeyName:
+            Type: String
+            Description: Existing EC2 KeyPair
+
+        Resources:
+          InstanceSG:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: SSH access
+              SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 22
+                  ToPort: 22
+                  CidrIp: 0.0.0.0/0
+
+          EC2Instance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              KeyName: !Ref KeyName
+              SecurityGroupIds:
+                - !Ref InstanceSG
+              BlockDeviceMappings:
+                - DeviceName: /dev/sda1
+                  Ebs:
+                    Encrypted: true
+  steps:
+    - Use updated and secure AMIs
+    - Restrict traffic via security groups
+    - Use SSH key pairs for access control
+    - Encrypt EBS volumes
+  title: Insecure service configuration - EC2
+  vulnerability_id: "333"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS native service to manage infrastructure as code
+  need: Enabling secure service configuration for S3 buckets
+  solution:
+    insecure_code_example:
+      description: >
+        This CloudFormation template creates a private S3 bucket but does
+        not enable versioning. Without versioning, deleted or overwritten
+        objects cannot be recovered, making the bucket vulnerable to
+        accidental or malicious data loss.
+      text: |
+        Resources:
+          InsecureBucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: my-insecure-bucket
+              AccessControl: Private
+              Tags:
+                - Key: Name
+                  Value: My bucket
+                - Key: Environment
+                  Value: Dev
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This CloudFormation template creates the same S3 bucket but
+        includes the VersioningConfiguration block with Status set to
+        Enabled. This helps protect against data loss by preserving
+        previous object versions.
+      text: |
+        Resources:
+          SecureBucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              BucketName: my-secure-bucket
+              AccessControl: Private
+              VersioningConfiguration:
+                Status: Enabled
+              Tags:
+                - Key: Name
+                  Value: My bucket
+                - Key: Environment
+                  Value: Dev
+  steps:
+    - Enable versioning for the S3 bucket
+    - Add the `VersioningConfiguration` block to the bucket definition
+    - Set the `Status` attribute to `Enabled`
+  title: Insecure service configuration - Bucket
+  vulnerability_id: "335"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS IAM for managing user access and permissions
+  need: Implementation of a strong password policy
+  solution:
+    insecure_code_example:
+      description: >
+        This CloudFormation example creates an IAM user but does not enforce
+        any account-level password policy. Without such a policy, users can
+        set weak passwords, making accounts more susceptible to brute-force
+        or guessing attacks.
+      text: |
+        Resources:
+          WeakIAMUser:
+            Type: AWS::IAM::User
+            Properties:
+              UserName: my-user
+
+          WeakLoginProfile:
+            Type: AWS::IAM::LoginProfile
+            Properties:
+              UserName: !Ref WeakIAMUser
+              Password: "TemporaryPassword123"
+              PasswordResetRequired: false
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This CloudFormation example includes a strong password policy
+        using the AWS::IAM::AccountPasswordPolicy resource. It enforces
+        complexity requirements such as minimum length, uppercase, lowercase,
+        numbers, symbols, and password expiration.
+      text: |
+        Resources:
+          StrongPasswordPolicy:
+            Type: AWS::IAM::AccountPasswordPolicy
+            Properties:
+              MinimumPasswordLength: 14
+              RequireUppercaseCharacters: true
+              RequireLowercaseCharacters: true
+              RequireNumbers: true
+              RequireSymbols: true
+              AllowUsersToChangePassword: true
+              PasswordReusePrevention: 5
+              MaxPasswordAge: 90
+  steps:
+    - Add an `AWS::IAM::AccountPasswordPolicy` resource to the CloudFormation template.
+    - Set `MinimumPasswordLength` to at least 14.
+    - Require uppercase, lowercase, numeric, and special characters.
+    - Optionally configure password reuse prevention and expiration.
+    - Educate users on strong password usage and enforce MFA where possible.
+  title: Weak credential policy - Password strength
+  vulnerability_id: "363"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Secure transmission of client information
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation code creates an EC2 instance and a security group
+        that allows inbound HTTP traffic (port 80) from any source (0.0.0.0/0).
+
+        This configuration is vulnerable because HTTP transmits data in plain text
+        without encryption, allowing sensitive information to be easily intercepted
+        by attackers.
+      text: |-
+        Resources:
+          WebSecurityGroup:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: Allow HTTP inbound traffic
+              SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 80
+                  ToPort: 80
+                  CidrIp: 0.0.0.0/0
+
+          WebInstance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              SecurityGroupIds:
+                - !Ref WebSecurityGroup
+              Tags:
+                - Key: Name
+                  Value: HelloWorld
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The updated code replaces HTTP with HTTPS by only allowing inbound traffic
+        on port 443 (HTTPS). This ensures data transmission is encrypted using TLS.
+
+        Make sure the application and web server are properly configured with a valid
+        SSL/TLS certificate to support secure HTTPS connections.
+      text: |-
+        Resources:
+          WebSecurityGroupHTTPS:
+            Type: AWS::EC2::SecurityGroup
+            Properties:
+              GroupDescription: Allow HTTPS inbound traffic
+              SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 443
+                  ToPort: 443
+                  CidrIp: 0.0.0.0/0
+
+          WebInstance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              SecurityGroupIds:
+                - !Ref WebSecurityGroupHTTPS
+              Tags:
+                - Key: Name
+                  Value: HelloWorld
+    steps:
+      - Update the security group to allow HTTPS traffic (port 443) instead of HTTP (port 80).
+      - Configure the application and web server to use TLS for secure communication.
+      - Obtain and install a valid SSL/TLS certificate.
+      - Redirect any HTTP traffic to HTTPS at the application or load balancer level.
+      - Deploy the updated CloudFormation stack in AWS.
+  title: Use of an insecure channel - HTTP
+  vulnerability_id: "372"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS CloudTrail for logging and monitoring AWS API activity
+    - Usage of AWS S3 Bucket for storing and retrieving files
+  need: Improved data authenticity validation for CloudTrail Logs
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation code creates a CloudTrail trail that sends logs
+        to an S3 bucket. However, it does not enable log file integrity validation.
+
+        Without this attribute, there is no guarantee that the log files have not been
+        tampered with. An attacker could manipulate logs without triggering detection,
+        compromising the authenticity and trustworthiness of audit data.
+      text: |-
+        Resources:
+          Trail:
+            Type: AWS::CloudTrail::Trail
+            Properties:
+              TrailName: example
+              S3BucketName: !Ref LogBucket
+              S3KeyPrefix: prefix
+              IncludeGlobalServiceEvents: true
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        This updated CloudFormation code enables log file integrity validation using
+        the `EnableLogFileValidation` attribute.
+
+        When enabled, CloudTrail generates hash digests for log files and signs them
+        with a private key. AWS validates these digests on retrieval to ensure logs
+        have not been modified, helping preserve the authenticity of audit trails.
+      text: |-
+        Resources:
+          Trail:
+            Type: AWS::CloudTrail::Trail
+            Properties:
+              TrailName: example
+              S3BucketName: !Ref LogBucket
+              S3KeyPrefix: prefix
+              IncludeGlobalServiceEvents: true
+              EnableLogFileValidation: true
+    steps:
+      - Add the `EnableLogFileValidation` property to the CloudTrail resource.
+      - Set its value to `true` to enforce integrity checks on CloudTrail logs.
+      - Redeploy the CloudFormation stack with the updated configuration.
+  title: Insufficient data authenticity validation - CloudTrail Logs
+  vulnerability_id: "394"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS KMS Key for encryption and decryption of data
+  need: Enforce automatic key rotation for KMS service
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation code defines an AWS KMS key, but it does not
+        enable automatic key rotation.
+
+        Without key rotation, the same encryption key is used indefinitely. This
+        increases the risk of compromise, as long-term static keys are more likely
+        to be exposed or brute-forced. Enabling key rotation is a security best
+        practice to limit exposure in case a key is compromised.
+      text: |-
+        Resources:
+          MyKmsKey:
+            Type: AWS::KMS::Key
+            Properties:
+              Description: "This is my KMS key"
+              EnableKeyRotation: false
+              KeyPolicy:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+                    Action: "kms:*"
+                    Resource: "*"
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        This CloudFormation code enables automatic key rotation for the AWS KMS key
+        using the `EnableKeyRotation` property.
+
+        With rotation enabled, AWS rotates the key material every year. This reduces
+        the impact of a key compromise and ensures that encryption keys are refreshed
+        regularly to improve the security posture of your infrastructure.
+      text: |-
+        Resources:
+          MyKmsKey:
+            Type: AWS::KMS::Key
+            Properties:
+              Description: "This is my KMS key"
+              EnableKeyRotation: true
+              KeyPolicy:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+                    Action: "kms:*"
+                    Resource: "*"
+    steps:
+      - Add or update the `EnableKeyRotation` property in the CloudFormation resource.
+      - Set the value of `EnableKeyRotation` to `true` to activate yearly key rotation.
+      - Deploy or update the CloudFormation stack.
+  title: Insecure service configuration - KMS
+  vulnerability_id: "396"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS resources such as EC2, ELB, and S3
+  need: Enhancement of traceability and logging in AWS instances
+  solution:
+    insecure_code_example:
+      description: |-
+        In the below CloudFormation template, we are creating an EC2 instance, a
+        Classic Load Balancer (ELB), and an S3 bucket. However, logging is not
+        enabled for any of these resources.
+
+        1. **EC2 Instance**: The instance is created without enabling detailed
+        monitoring (`Monitoring: true`), which limits metric visibility.
+
+        2. **ELB**: The Classic Load Balancer does not have `AccessLoggingPolicy`
+        configured, so no logs of incoming requests are captured.
+
+        3. **S3 Bucket**: The bucket lacks a `LoggingConfiguration`, meaning access
+        to the bucket and its objects is not tracked.
+
+        Without logging, malicious activity or anomalies cannot be traced effectively.
+      text: |-
+        Resources:
+          MyInstance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              Tags:
+                - Key: Name
+                  Value: example-instance
+
+          MyELB:
+            Type: AWS::ElasticLoadBalancing::LoadBalancer
+            Properties:
+              Listeners:
+                - LoadBalancerPort: 80
+                  InstancePort: 80
+                  Protocol: HTTP
+              AvailabilityZones:
+                - us-west-2a
+                - us-west-2b
+                - us-west-2c
+
+          MyBucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              AccessControl: Private
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The below CloudFormation template enables logging for the EC2 instance,
+        ELB, and S3 bucket.
+
+        1. **EC2 Instance**: `Monitoring` is set to `true` to enable detailed
+        monitoring.
+
+        2. **ELB**: `AccessLoggingPolicy` is added to enable access logs, stored
+        in the specified S3 bucket with a defined prefix and interval.
+
+        3. **S3 Bucket**: `LoggingConfiguration` is added to send access logs to
+        a target bucket with a prefix.
+      text: |-
+        Resources:
+          MyInstance:
+            Type: AWS::EC2::Instance
+            Properties:
+              ImageId: ami-0c94855ba95c574c8
+              InstanceType: t2.micro
+              Monitoring: true
+              Tags:
+                - Key: Name
+                  Value: example-instance
+
+          MyELB:
+            Type: AWS::ElasticLoadBalancing::LoadBalancer
+            Properties:
+              Listeners:
+                - LoadBalancerPort: 80
+                  InstancePort: 80
+                  Protocol: HTTP
+              AvailabilityZones:
+                - us-west-2a
+                - us-west-2b
+                - us-west-2c
+              AccessLoggingPolicy:
+                Enabled: true
+                S3BucketName: my-access-logs-bucket
+                EmitInterval: 5
+                S3BucketPrefix: elb-logs/
+
+          MyBucket:
+            Type: AWS::S3::Bucket
+            Properties:
+              AccessControl: Private
+              LoggingConfiguration:
+                DestinationBucketName: my-log-bucket
+                LogFilePrefix: log/
+    steps:
+      - Enable detailed monitoring in EC2 instances by setting `Monitoring` to `true`.
+      - Configure the ELB with `AccessLoggingPolicy` to capture request logs.
+      - Add a `LoggingConfiguration` to the S3 bucket to enable server access logging.
+  title: Traceability Loss - AWS
+  vulnerability_id: "400"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS resources such as EFS and KMS
+  need:
+    Secure encryption of confidential information in AWS Elastic File System (EFS)
+    using Customer Managed Keys (CMKs)
+  solution:
+    insecure_code_example:
+      description: |-
+        The above CloudFormation template creates an EFS file system without
+        specifying any encryption configuration.
+
+        By default, AWS EFS encrypts data at rest using a default AWS-managed KMS
+        key. While this provides some level of protection, it does not give the
+        customer full control over key management. If the default key is ever
+        compromised, data confidentiality could be at risk.
+
+        To follow best practices and meet compliance requirements, it is
+        recommended to use a Customer Managed Key (CMK) so that you control the
+        lifecycle and access policies of the encryption key.
+      text: |-
+        Resources:
+          MyEFSFileSystem:
+            Type: AWS::EFS::FileSystem
+            Properties:
+              PerformanceMode: generalPurpose
+              Encrypted: false
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The above CloudFormation template first creates a Customer Managed Key
+        (CMK) using the AWS::KMS::Key resource. The key includes a 7-day deletion
+        window, allowing recovery in case of accidental deletion.
+
+        The EFS file system is then created with encryption enabled, using the CMK
+        ARN specified via the KmsKeyId property. This ensures that data is
+        encrypted with a customer-controlled key, improving control and security
+        over confidential data.
+      text: |-
+        Resources:
+          EFSEncryptionKey:
+            Type: AWS::KMS::Key
+            Properties:
+              Description: KMS key for EFS encryption
+              Enabled: true
+              KeyPolicy:
+                Version: "2012-10-17"
+                Statement:
+                  - Effect: Allow
+                    Principal:
+                      AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                    Action: "kms:*"
+                    Resource: "*"
+              PendingWindowInDays: 7
+
+          MyEFSFileSystem:
+            Type: AWS::EFS::FileSystem
+            Properties:
+              PerformanceMode: generalPurpose
+              Encrypted: true
+              KmsKeyId: !Ref EFSEncryptionKey
+    steps:
+      - Create a Customer Managed Key (CMK) using AWS::KMS::Key
+      - Create an AWS::EFS::FileSystem resource with encryption enabled
+      - Reference the CMK in the KmsKeyId property of the EFS resource
+  title: Non-encrypted confidential information - EFS
+  vulnerability_id: "406"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of aws-sdk for interacting with Amazon Web Services (AWS) services
+  need: Secure encryption of confidential information stored in EBS volumes
+  solution:
+    insecure_code_example:
+      description:
+        "The CloudFormation snippet below defines an AWS::EC2::Volume resource\
+        \ that provisions an Amazon EBS volume in the `us-west-2a` Availability Zone\
+        \ with a size of 40 GiB. However, the volume is not encrypted because the\
+        \ `Encrypted` property is either omitted or explicitly set to `false`.\n\n\
+        This leads to a security risk because data stored on this volume is not protected\
+        \ at rest. If an attacker gains access to the EBS volume, sensitive information\
+        \ such as system, user, or application data could be exposed.\n\nIt is considered\
+        \ best practice to always enable encryption at rest for EBS volumes. AWS provides\
+        \ native support for encryption using AWS KMS-managed keys. Enabling encryption\
+        \ mitigates risks by ensuring that the data is protected even if unauthorized\
+        \ access to the volume occurs."
+      text: |-
+        Resources:
+          UnencryptedEBSVolume:
+            Type: AWS::EC2::Volume
+            Properties:
+              AvailabilityZone: us-west-2a
+              Size: 40
+              Encrypted: false
+    language: cloudformation
+    secure_code_example:
+      description: |-
+        The following CloudFormation snippet shows the corrected version of the previous insecure configuration. The `Encrypted` property is now set to `true`, ensuring that data stored on the EBS volume is protected at rest.
+
+        The volume will now be encrypted using the default AWS managed key (or a custom key, if specified). This significantly reduces the risk of unauthorized access to sensitive information in case of data exposure.
+
+        No other properties were modified; the `AvailabilityZone` and `Size` remain as originally configured.
+      text: |-
+        Resources:
+          EncryptedEBSVolume:
+            Type: AWS::EC2::Volume
+            Properties:
+              AvailabilityZone: us-west-2a
+              Size: 40
+              Encrypted: true
+    steps:
+      - Identify all the EBS volumes in your infrastructure that are not encrypted
+      - Update the CloudFormation templates to include the `Encrypted: true` property
+          in each AWS::EC2::Volume resource
+      - Deploy the updated CloudFormation stack to enforce encryption at rest
+      - Verify through the AWS Console or CLI that all volumes are encrypted
+  title: Non-encrypted confidential information - EBS Volumes
+  vulnerability_id: "407"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS SDK for interacting with Amazon Web Services
+  need: Enhancement of traceability and logging capabilities in API Gateway
+  solution:
+    insecure_code_example:
+      description: >
+        The following example defines an AWS API Gateway REST API using
+        CloudFormation without enabling logging.
+
+        The `AWS::ApiGateway::RestApi` resource creates the API, and the
+        `AWS::ApiGateway::Stage` resource defines the "prod" stage. However, the
+        `AccessLogSetting` property is not configured in the stage. This means
+        that access logs will not be captured.
+
+        Without logging, there is a loss of visibility into request and response
+        data, making it more difficult to troubleshoot issues or detect abnormal
+        behavior, which leads to traceability loss and is considered a security
+        weakness.
+      text: |-
+        Resources:
+          MyRestApi:
+            Type: AWS::ApiGateway::RestApi
+            Properties:
+              Name: my-rest-api
+              Description: This is my API for demonstration purposes
+
+          MyDeployment:
+            Type: AWS::ApiGateway::Deployment
+            Properties:
+              RestApiId: !Ref MyRestApi
+              StageName: prod
+
+          MyStage:
+            Type: AWS::ApiGateway::Stage
+            Properties:
+              StageName: prod
+              DeploymentId: !Ref MyDeployment
+              RestApiId: !Ref MyRestApi
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This example corrects the vulnerability by enabling access logging in the
+        API Gateway stage using the `AccessLogSetting` property.
+
+        A `AWS::Logs::LogGroup` resource is created to store the logs, and the
+        destination ARN is referenced in the stage. The log format is defined using
+        `$context` variables to include relevant request and response metadata.
+
+        Enabling logging ensures traceability and allows integration with monitoring
+        tools like CloudWatch to detect anomalies and investigate issues.
+      text: |-
+        Resources:
+          MyRestApi:
+            Type: AWS::ApiGateway::RestApi
+            Properties:
+              Name: my-rest-api
+              Description: This is my API for demonstration purposes
+
+          MyLogGroup:
+            Type: AWS::Logs::LogGroup
+            Properties:
+              LogGroupName: !Sub "${MyRestApi}-access-logs"
+
+          MyDeployment:
+            Type: AWS::ApiGateway::Deployment
+            Properties:
+              RestApiId: !Ref MyRestApi
+              StageName: prod
+
+          MyStage:
+            Type: AWS::ApiGateway::Stage
+            Properties:
+              StageName: prod
+              DeploymentId: !Ref MyDeployment
+              RestApiId: !Ref MyRestApi
+              AccessLogSetting:
+                DestinationArn: !GetAtt MyLogGroup.Arn
+                Format: |
+                  $context.identity.sourceIp - - [$context.requestTime]
+                  "$context.httpMethod $context.routeKey $context.protocol"
+                  $context.status $context.responseLength $context.requestId
+    steps:
+      - Enable the logging feature in the API Gateway stage using AccessLogSetting
+      - Define a CloudWatch Logs group to receive the logs
+      - Reference the log group ARN in the stage configuration
+      - Set a detailed access log format using $context variables
+  title: Traceability Loss - API Gateway
+  vulnerability_id: "408"
+  last_update_time: 04/04/2025
+- context:
+    - Usage of CloudFormation for Infrastructure as Code (IaC)
+    - Usage of AWS Redshift cluster resources for managing Amazon Redshift clusters
+  need: Encryption of confidential information in AWS Redshift Cluster
+  solution:
+    insecure_code_example:
+      description: >
+        This CloudFormation template creates an Amazon Redshift cluster without
+        encryption.
+
+        The `AWS::Redshift::Cluster` resource defines the properties of the cluster.
+        However, the `Encrypted` property is omitted, which means encryption is not
+        enabled by default.
+
+        If an unauthorized individual gains access to this cluster's data, they could
+        read it without any encryption key, which represents a significant security
+        risk, especially when storing sensitive data.
+
+        Enabling encryption is essential to protect data at rest.
+      text: |-
+        Resources:
+          MyRedshiftCluster:
+            Type: AWS::Redshift::Cluster
+            Properties:
+              ClusterIdentifier: tf-redshift-cluster
+              DBName: mydb
+              MasterUsername: foo
+              MasterUserPassword: Mustbe8characters
+              NodeType: dc1.large
+              ClusterType: single-node
+    language: cloudformation
+    secure_code_example:
+      description: >
+        This CloudFormation template enables encryption for the Redshift cluster
+        using AWS KMS.
+
+        The `AWS::KMS::Key` resource creates a KMS key with a basic policy that
+        grants full access to the account root. The `AWS::Redshift::Cluster`
+        resource enables encryption by setting the `Encrypted` property to `true`
+        and specifying the KMS key ARN in `KmsKeyId`.
+
+        This ensures that data in the cluster is encrypted and can only be accessed
+        with appropriate KMS permissions.
+      text: |-
+        Resources:
+          RedshiftKmsKey:
+            Type: AWS::KMS::Key
+            Properties:
+              Description: KMS key for Redshift
+              KeyPolicy:
+                Version: "2012-10-17"
+                Id: key-default-1
+                Statement:
+                  - Sid: Enable IAM User Permissions
+                    Effect: Allow
+                    Principal:
+                      AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+                    Action: kms:*
+                    Resource: "*"
+
+          MyRedshiftCluster:
+            Type: AWS::Redshift::Cluster
+            Properties:
+              ClusterIdentifier: tf-redshift-cluster
+              DBName: mydb
+              MasterUsername: foo
+              MasterUserPassword: Mustbe8characters
+              NodeType: dc1.large
+              ClusterType: single-node
+              Encrypted: true
+              KmsKeyId: !Ref RedshiftKmsKey
+    steps:
+      - Enable encryption for the AWS Redshift cluster
+      - Add an `AWS::KMS::Key` resource with appropriate permissions
+      - Set the `Encrypted` property to `true` in `AWS::Redshift::Cluster`
+      - Set the `KmsKeyId` property to reference the created KMS key
+  title: Non-encrypted confidential information - Redshift Cluster
+  vulnerability_id: "433"
+  last_update_time: 04/04/2025

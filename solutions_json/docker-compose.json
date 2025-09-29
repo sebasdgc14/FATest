@@ -1,0 +1,29 @@
+[
+  {
+    "vulnerability_id": "380",
+    "title": "Supply Chain Attack - Docker",
+    "context": [
+      "Usage of docker-compose for managing containerized applications"
+    ],
+    "need": "Ensuring secure and verifiable supply chain for Docker dependencies in docker-compose",
+    "solution": {
+      "language": "docker-compose",
+      "insecure_code_example": {
+        "description": "This docker-compose file uses an unpinned image reference (e.g., 'python:3.11.5') for the app service. Without specifying an image digest, the integrity of the base image cannot be verified, which exposes the application to potential supply chain attacks.",
+        "text": "services:\n  app:\n    image: python:3.11.5\n    volumes:\n      - .:/app\n    working_dir: /app\n    command: python app.py"
+      },
+      "secure_code_example": {
+        "description": "In the secure version, the image is referenced by its digest, ensuring that the exact verified image is used. Additionally, a non-root user is specified to enhance container security.",
+        "text": "services:\n  app:\n    image: python@sha256:8a164692c20c8f51986d25c16caa6bf03bde14e4b6e6a4c06b5437d5620cc96c\n    volumes:\n      - .:/app\n    working_dir: /app\n    user: \"1001\"\n    command: python app.py"
+      },
+      "steps": [
+        "Pin the exact version of the base image using its digest.",
+        "Avoid using the 'latest' tag or unverified tags.",
+        "Use non-root users for running containers.",
+        "Verify dependency integrity via image digests or secure registries.",
+        "Regularly update and patch dependencies."
+      ]
+    },
+    "last_update_time": "04/02/2025"
+  }
+]

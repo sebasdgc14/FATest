@@ -1,0 +1,28 @@
+[
+  {
+    "vulnerability_id": "157",
+    "title": "Unrestricted access between network segments",
+    "context": [
+      "Usage of Helm for Kubernetes resource deployment",
+      "Lack of network segmentation enforcement via Kubernetes NetworkPolicy"
+    ],
+    "need": "Restrict access between Kubernetes network segments using NetworkPolicy",
+    "solution": {
+      "language": "helm",
+      "insecure_code_example": {
+        "description": "This Helm chart defines a Deployment and Service without any NetworkPolicy, allowing unrestricted communication from any pod in the cluster. This permits lateral movement and violates network segmentation principles.\n",
+        "text": "# templates/deployment.yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: {{ .Release.Name }}-app\nspec:\n  selector:\n    matchLabels:\n      app: {{ .Release.Name }}-app\n  template:\n    metadata:\n      labels:\n        app: {{ .Release.Name }}-app\n    spec:\n      containers:\n        - name: app\n          image: nginx"
+      },
+      "secure_code_example": {
+        "description": "This example adds a minimal NetworkPolicy to restrict ingress traffic only to pods with the label `access: allowed`, enforcing network segmentation.\n",
+        "text": "# templates/networkpolicy.yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: {{ .Release.Name }}-np\nspec:\n  podSelector:\n    matchLabels:\n      app: {{ .Release.Name }}-app\n  ingress:\n    - from:\n        - podSelector:\n            matchLabels:\n              access: allowed\n  policyTypes:\n    - Ingress"
+      },
+      "steps": [
+        "Define a `NetworkPolicy` in the Helm chart",
+        "Use `podSelector` and label-based ingress rules",
+        "Limit incoming traffic to trusted pods only"
+      ]
+    },
+    "last_update_time": "04/04/2025"
+  }
+]

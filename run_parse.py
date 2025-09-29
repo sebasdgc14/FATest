@@ -1,11 +1,12 @@
-from test import (
-    load_yaml_mapping,
-    parse_requirements,
-    parse_compliance,
-    parse_vulnerabilities,
-)
 import json
 from pathlib import Path
+
+from test import (
+    load_yaml_mapping,
+    parse_compliance,
+    parse_requirements,
+    parse_vulnerabilities,
+)
 
 # ----------------------
 # Requirements data

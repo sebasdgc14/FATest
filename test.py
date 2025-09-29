@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import yaml
 
 
@@ -19,7 +20,7 @@ def yaml_safe_load(text: str) -> Any:
     return yaml.safe_load(text) or {}
 
 
-def load_yaml_mapping(path: str) -> Dict[str, Any]:
+def load_yaml_mapping(path: str) -> dict[str, Any]:
     """
     Explicit loader that guarantees the returned value is a mapping (dict).
 
@@ -33,7 +34,7 @@ def load_yaml_mapping(path: str) -> Dict[str, Any]:
     return data
 
 
-def load_yaml_sequence(path: str) -> List[Any]:
+def load_yaml_sequence(path: str) -> list[Any]:
     """
     Explicit loader that guarantees the returned value is a sequence (list).
 
@@ -65,7 +66,7 @@ def ensure_str(a: Any, default: str = "") -> str:
     return str(a)
 
 
-def ensure_list_of_str(x: Any) -> List[str]:
+def ensure_list_of_str(x: Any) -> list[str]:
     if x is None:
         return []
     return [ensure_str(el) for el in x] if isinstance(x, list) else [ensure_str(x)]
@@ -76,7 +77,7 @@ def ensure_list_of_str(x: Any) -> List[str]:
 #############################################################################
 
 
-def normalize_requirements(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_requirements(rid: str, raw: dict[str, Any]) -> dict[str, Any]:
     """
     Given the shape of the requirements yaml lets give it a set structure.
 
@@ -134,7 +135,7 @@ def normalize_requirements(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
     return build
 
 
-def normalize_compliance(name: str, raw: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_compliance(name: str, raw: dict[str, Any]) -> dict[str, Any]:
     """
     Normalize one top-level compliance entry (e.g. 'capec', 'bsimm').
 
@@ -164,7 +165,7 @@ def normalize_compliance(name: str, raw: Dict[str, Any]) -> Dict[str, Any]:
     es_summary = ensure_str(es.get("summary"))
 
     defs = raw.get("definitions") or {}
-    definitions_list: List[Dict[str, Any]] = []
+    definitions_list: list[dict[str, Any]] = []
 
     # definitions is usually a mapping id -> {title, link}
     if isinstance(defs, dict):
@@ -202,7 +203,7 @@ def normalize_compliance(name: str, raw: Dict[str, Any]) -> Dict[str, Any]:
     return build
 
 
-def normalize_vulnerability(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_vulnerability(rid: str, raw: dict[str, Any]) -> dict[str, Any]:
     """
     Normalize a single vulnerability entry.
 
@@ -226,7 +227,7 @@ def normalize_vulnerability(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
     es = raw.get("es") or {}
 
     # Define a language block to avoid repetitive code
-    def _lang_block(block: Dict[str, Any]) -> Dict[str, Any]:
+    def _lang_block(block: dict[str, Any]) -> dict[str, Any]:
         return {
             "title": ensure_str(block.get("title")),
             "description": ensure_str(block.get("description")),
@@ -275,7 +276,7 @@ def normalize_vulnerability(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
                 score_temporal_raw.get("report_confidence")
             ),
         }
-    score: Optional[Dict[str, Any]] = None
+    score: dict[str, Any] | None = None
     if score_base or score_temporal:
         score = {"base": score_base, "temporal": score_temporal}
 
@@ -307,7 +308,7 @@ def normalize_vulnerability(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
         score4_threat = {
             "exploit_maturity": ensure_str(score4_threat_raw.get("exploit_maturity")),
         }
-    score_v4: Optional[Dict[str, Any]] = None
+    score_v4: dict[str, Any] | None = None
     if score4_base or score4_threat:
         score_v4 = {"base": score4_base, "threat": score4_threat}
 
@@ -343,7 +344,7 @@ def normalize_vulnerability(rid: str, raw: Dict[str, Any]) -> Dict[str, Any]:
     return build
 
 
-def normalize_solutions(raw: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_solutions(raw: dict[str, Any]) -> dict[str, Any]:
     """
     Normalize a single solutions entry.
 
@@ -370,7 +371,7 @@ def normalize_solutions(raw: Dict[str, Any]) -> Dict[str, Any]:
     # Now for the example structures
     solution = raw.get("solution") or {}
 
-    def code_example(name: str, sol: Dict):
+    def code_example(name: str, sol: dict):
         b = sol.get(name) or {}
         return {
             "description": ensure_str(b.get("description")),
@@ -408,40 +409,40 @@ def normalize_solutions(raw: Dict[str, Any]) -> Dict[str, Any]:
 #############################################################################
 
 
-def parse_requirements(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_requirements(doc: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Parse the full requirements mapping into a list of normalized entries.
     """
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for rid, raw in doc.items():
         if isinstance(raw, dict):
             items.append(normalize_requirements(str(rid), raw))
     return items
 
 
-def parse_compliance(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_compliance(doc: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Parse the full compliance mapping into a list of normalized entries.
 
     This mirrors `parse_requirements` but for the compliance file's shape.
     """
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for name, raw in doc.items():
         if isinstance(raw, dict):
             items.append(normalize_compliance(str(name), raw))
     return items
 
 
-def parse_vulnerabilities(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
+def parse_vulnerabilities(doc: dict[str, Any]) -> list[dict[str, Any]]:
     """Parse full vulnerabilities mapping into a list of normalized entries."""
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for vid, raw in doc.items():
         if isinstance(raw, dict):
             items.append(normalize_vulnerability(str(vid), raw))
     return items
 
 
-def parse_solutions(doc: Any) -> List[Dict[str, Any]]:
+def parse_solutions(doc: Any) -> list[dict[str, Any]]:
     """Parse full solutions input into a list of normalized entries.
 
     Supports both mapping (id -> entry) and list-of-entries YAML shapes.
@@ -449,7 +450,7 @@ def parse_solutions(doc: Any) -> List[Dict[str, Any]]:
     own `vulnerability_id` field. For list inputs entries are processed in
     order.
     """
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     # if isinstance(doc, dict):
     #    for _, raw in doc.items():
     #       if isinstance(raw, dict):

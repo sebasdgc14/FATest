@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List
+
 from test import load_yaml_sequence, parse_solutions
 
 SRC_DIR = Path(__file__).parent / "solutions_yaml"
@@ -9,7 +9,7 @@ OUT_DIR = Path(__file__).parent / "solutions_json"
 OUT_DIR.mkdir(exist_ok=True)
 
 
-def build_all() -> List[str]:
+def build_all() -> list[str]:
     written = []
     for yaml_path in SRC_DIR.glob("*.yaml"):
         try:

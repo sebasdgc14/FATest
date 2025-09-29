@@ -1,0 +1,114 @@
+[
+  {
+    "vulnerability_id": "418",
+    "title": "Insecure service configuration - Docker",
+    "context": [
+      "Usage of Docker for containerizing and deploying applications",
+      "Usage of Ubuntu 18.04 as the operating system for development or deployment"
+    ],
+    "need": "Secure configuration of Docker services",
+    "solution": {
+      "language": "docker",
+      "insecure_code_example": {
+        "description": "In the above Dockerfile, the `ADD` command is used to copy the `malicious.tar.gz` file from the local system to the `/var/www/html/` directory in the Docker container. \n\nThe `ADD` command in Docker has the functionality of automatically extracting compressed files when copying them into the container. This can be beneficial in some cases, but it also creates a significant security risk. \n\nIn this case, if the `malicious.tar.gz` file contains a zip bomb or is crafted to exploit the Zip Slip vulnerability, it could cause damage as soon as it is extracted in the Docker container. A zip bomb is a malicious archive file designed to crash or render useless the program or system reading it, because its content are extremely large. Zip Slip is a form of directory traversal that can be exploited by extracting files from an archive.\n\nThe `ADD` command is also more prone to cache invalidation issues, which can lead to unexpected behavior in your Docker builds. \n\nThe recommended way to copy files in a Dockerfile is to use the `COPY` command, which does not have these security issues and is less prone to cache invalidation issues.",
+        "text": "FROM ubuntu:18.04\nADD malicious.tar.gz /var/www/html/"
+      },
+      "secure_code_example": {
+        "description": "The original code was using the `ADD` command to copy a tar file from the local system to the Docker image. This is a potential security risk as the `ADD` command automatically extracts tar files, which could lead to the exploitation of vulnerabilities such as zip bombs and Zip Slip.\n\nThe fixed code replaces the `ADD` command with the `COPY` command. The `COPY` command simply copies the file or directory from the local system to the Docker image without extracting it. This reduces the risk of automatic activation of potential vulnerabilities contained within the tar file.\n\nPlease note that the `COPY` command requires that the source file or directory and the destination directory be specified. Also, it is important to ensure that the source file or directory does not contain any compressed archive files that could potentially contain malicious content.",
+        "text": "FROM ubuntu:18.04\nCOPY malicious.tar.gz /var/www/html/"
+      },
+      "steps": [
+        "Replace the ADD command with the COPY command",
+        "Specify the source file or directory and the destination directory in the COPY command",
+        "Ensure that the source file or directory is not a compressed archive file that could potentially contain malicious content"
+      ]
+    },
+    "last_update_time": "09/18/2023"
+  },
+  {
+    "vulnerability_id": "266",
+    "title": "Excessive Privileges - Docker",
+    "context": [
+      "Usage of Node.js 20 for server-side JavaScript development"
+    ],
+    "need": "Enforce proper privilege separation in Docker containers",
+    "solution": {
+      "language": "docker",
+      "insecure_code_example": {
+        "description": "The Dockerfile above is used to create a Node.js application running on Docker. Dockerfile instructions are executed in order. Here is a breakdown of what each line does:\n\n1. `FROM node:20`: This line is pulling the base image for Node.js version 20.\n2. `WORKDIR /app`: This sets the working directory in the container to `/app`.\n3. `COPY package*.json ./`: This line is copying the `package.json` and `package-lock.json` (if available) to the working directory in the container.\n4. `RUN npm install`: This installs the dependencies defined in `package.json`.\n5. `COPY . .`: This copies the rest of the application to the working directory in the container.\n6. `EXPOSE 8080`: This informs Docker that the container listens on the specified network ports at runtime. Here it is set to 8080.\n7. `CMD [ \"node\", \"app.js\" ]`: This provides defaults for an executing container which includes an executable, or if an entry point is not specified, to run an application when the container is run.\n\nThe vulnerability in this Dockerfile is that it runs the application as root in the Docker container. This is a security risk because if an attacker gains control of the container, they could gain root access to the host machine. This is an example of the excessive privileges vulnerability.",
+        "text": "FROM node:20\nWORKDIR /app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 8080\nCMD [ \"node\", \"app.js\" ]"
+      },
+      "secure_code_example": {
+        "description": "The Dockerfile has been updated to fix the excessive privileges vulnerability. A new user named \"appuser\" has been created and is used to run the application instead of the root user. This restricts the privileges of the application and minimizes potential risks.\n\nThe Docker image is also now referenced by its digest, ensuring that the same image is always used, increasing the reproducibility of the build.\n\nThe application's dependencies are installed and the application source is bundled while the root user is active, then the user is switched to \"appuser\" before the application is started. This ensures that the application runs with restricted privileges.\n\nThe Dockerfile now needs to be used to build a new Docker image, and the application should be tested to ensure it still functions correctly with the \"appuser\".",
+        "text": "# Use an official Node runtime as a parent image with digest\nFROM node@sha256:c2ed73be34c27a42bd202021c7fdf1a92999fb171f2e1d54bd4b461d9344eeb2\n\n# Create app directory\nWORKDIR /app\n\n# Install app dependencies\nCOPY package*.json ./\n\n# Create a user named \"appuser\"\nRUN groupadd -r appuser &&\\\n    useradd -r -g appuser -d /app -s /sbin/nologin -c \"Docker image user\" appuser &&\\\n    chown -R appuser:appuser /app &&\\\n    npm install\n\n# Bundle app source\nCOPY . .\n\n# Change to non-root user\nUSER appuser\n\n# Expose port and start application\nEXPOSE 8080\nCMD [ \"node\", \"app.js\" ]"
+      },
+      "steps": [
+        "1. Create a custom user in the Dockerfile.",
+        "2. Use the custom user instead of the root user to execute instructions inside the container.",
+        "3. Restrict the privileges of the custom user to minimize potential risks.",
+        "4. Update the Dockerfile to set the custom user as the default user.",
+        "5. Rebuild the Docker image with the updated Dockerfile.",
+        "6. Test the application to ensure it functions correctly with the custom user."
+      ]
+    },
+    "last_update_time": "09/18/2023"
+  },
+  {
+    "vulnerability_id": "380",
+    "title": "Supply Chain Attack - Docker",
+    "context": [
+      "Usage of Python 3.11.5 for developing Python applications",
+      "Usage of Flask version 2.3.3 for building web applications in Python"
+    ],
+    "need": "Ensuring secure and verifiable supply chain for Docker dependencies",
+    "solution": {
+      "language": "docker",
+      "insecure_code_example": {
+        "description": "In the Dockerfile above, we are creating a Docker image for a Flask application with Python 3.11.5 and Flask 2.3.3. \n\nThe vulnerability lies in the `FROM python:3.11.5` line. Here, we are using the `python:3.11.5` Docker image as the base image for our Docker build. However, we are not pinning this dependency to an exact digest. This means that we are not verifying the integrity of the `python:3.11.5` image. If a malicious actor were to gain control of the `python:3.11.5` image, they could insert malicious components into it. When we build our Docker image, we would unknowingly include these malicious components in our Docker image.\n\nSimilarly, the `RUN pip install Flask==2.3.3` line installs Flask 2.3.3 into our Docker image. Again, we are not verifying the integrity of the Flask 2.3.3 package. If a malicious actor were to gain control of the Flask 2.3.3 package, they could insert malicious code into it. When we install Flask 2.3.3 into our Docker image, we would unknowingly include this malicious code in our Docker image.\n\nThis vulnerability is known as a Supply Chain Attack. In a Supply Chain Attack, a malicious actor compromises a component in a software supply chain (in this case, the `python:3.11.5` Docker image and the Flask 2.3.3 package), and leverages this compromise to attack downstream consumers of this component (in this case, our Docker image).",
+        "text": "# Dockerfile\nFROM python:3.11.5\n\nWORKDIR /app\n\nCOPY . /app\n\nRUN pip install Flask==2.3.3\n\nCMD [\"python\", \"app.py\"]"
+      },
+      "secure_code_example": {
+        "description": "This Dockerfile is used to build a Docker image for a Flask application. The base image is a specific version of Python (3.11.5) and its integrity is verified using a SHA256 digest. The Flask version is also pinned to a specific version (2.3.3) to ensure the integrity and stability of the application. The Dockerfile also specifies a non-root user (user with ID 1001) to run the application, which is a good practice to enhance the security of the Docker container.",
+        "text": "# Dockerfile\nFROM python@sha256:8a164692c20c8f51986d25c16caa6bf03bde14e4b6e6a4c06b5437d5620cc96c\n\nWORKDIR /app\n\nCOPY . /app\n\nRUN pip install Flask==2.3.3\n\nUSER 1001\n\nCMD [\"python\", \"app.py\"]"
+      },
+      "steps": [
+        "Pin the exact version of the base image in the Dockerfile.",
+        "Use a specific version of Python instead of using the latest version.",
+        "Avoid using the tag latest.",
+        "Pin the exact version of Flask in the Dockerfile.",
+        "Verify the integrity of the dependencies by using mechanisms such as git-commits, artifacts, and hashes.",
+        "Regularly update and patch the dependencies to ensure the latest security fixes.",
+        "Implement a secure supply chain process to prevent supply chain attacks."
+      ]
+    },
+    "last_update_time": "09/18/2023"
+  },
+  {
+    "vulnerability_id": "427",
+    "title": "Use of an insecure channel - Docker",
+    "context": [
+      "Usage of Node.js 20 for server-side JavaScript development"
+    ],
+    "need": "Secure communication channels for Docker containers",
+    "solution": {
+      "language": "docker",
+      "insecure_code_example": {
+        "description": "In the Dockerfile provided above, the `EXPOSE` instruction is used to inform Docker that the container listens on the specified network ports at runtime. In this case, port 80 is being exposed. \n\nPort 80 is typically used for HTTP traffic. Exposing this port can lead to potential security risks as it opens up the application running inside the Docker container to the outside world. If an attacker gains access to this port, they could potentially exploit it to carry out attacks such as Denial of Service (DoS), data theft, or even gain unauthorized access to the system.\n\nFurthermore, the `RUN npm install` command is run as root in the Dockerfile. This could potentially allow an attacker to gain root access to the Docker container if they were able to exploit a vulnerability in the application.\n\nIn summary, the Dockerfile is vulnerable due to the exposure of port 80 and the running of commands as root.",
+        "text": "# Dockerfile for a Node.js application\nFROM node:20\nWORKDIR /usr/src/app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nEXPOSE 80\nCMD [ \"node\", \"server.js\" ]"
+      },
+      "secure_code_example": {
+        "description": "The Dockerfile no longer exposes port 80, reducing the attack surface. The application should be deployed behind a reverse proxy like Nginx, which can handle HTTPS with TLS and expose only the necessary ports. The Dockerfile uses a digest to specify the Node.js image, ensuring that the same image is always used. The Dockerfile also sets up a non-root user to run the application, following the principle of least privilege.",
+        "text": "# Dockerfile for a Node.js application\nFROM node@sha256:c2ed73be34c27a42bd202021c7fdf1a92999fb171f2e1d54bd4b461d9344eeb2\nWORKDIR /usr/src/app\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nRUN addgroup -S appgroup && adduser -S appuser -G appgroup\nUSER appuser\nCMD [ \"node\", \"server.js\" ]"
+      },
+      "steps": [
+        "Remove the EXPOSE instruction from the Dockerfile.",
+        "Update the CMD instruction to use a secure communication channel, such as HTTPS with TLS v1.2.",
+        "Consider using a reverse proxy, such as Nginx, to handle the secure communication and expose only the necessary ports.",
+        "Update the documentation to specify the required ports for the application.",
+        "Regularly update and patch the Docker image and dependencies to ensure security.",
+        "Test the updated Dockerfile to ensure the application functions correctly over the secure channel."
+      ]
+    },
+    "last_update_time": "09/18/2023"
+  }
+]
