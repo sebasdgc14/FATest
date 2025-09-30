@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import "./App.css";
-import RequirementsPage from "./pages/RequirementsPage";
-import CompliancePage from "./pages/CompliancePage";
-import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
-import SolutionsPage from "./pages/SolutionsPage";
+
+// Code-split page modules: they will be requested only when user navigates.
+// Vite will emit separate chunks for each lazy import.
+const RequirementsPage = lazy(() => import("./pages/RequirementsPage"));
+const CompliancePage = lazy(() => import("./pages/CompliancePage"));
+const VulnerabilitiesPage = lazy(() => import("./pages/VulnerabilitiesPage"));
+const SolutionsPage = lazy(() => import("./pages/SolutionsPage"));
 
 type View = "requirements" | "compliance" | "vulnerabilities" | "solutions";
 
@@ -26,10 +29,17 @@ function App() {
           Solutions
         </button>
       </nav>
-      {view === "requirements" && <RequirementsPage />}
-      {view === "compliance" && <CompliancePage />}
-      {view === "vulnerabilities" && <VulnerabilitiesPage />}
-      {view === "solutions" && <SolutionsPage />}
+      <Suspense
+        fallback=
+          {<div style={{ fontSize: ".9rem", opacity: 0.7 }}>
+            Loading {view}...
+          </div>}
+      >
+        {view === "requirements" && <RequirementsPage />}
+        {view === "compliance" && <CompliancePage />}
+        {view === "vulnerabilities" && <VulnerabilitiesPage />}
+        {view === "solutions" && <SolutionsPage />}
+      </Suspense>
     </div>
   );
 }
