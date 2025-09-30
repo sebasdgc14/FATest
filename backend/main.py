@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import TypeAdapter, ValidationError
 
 from backend.loader import load_json
 from backend.models import (
@@ -72,6 +73,45 @@ def create_app(data_root: Path | None = None) -> FastAPI:
         solutions_dir = next((c for c in sol_candidates if c.exists()), sol_candidates[-1])
 
     app = FastAPI(title="PyYAML API")
+
+    # ------------------------------------------------------------------
+    # Eager validation setup
+    # ------------------------------------------------------------------
+    # We validate core JSON datasets at startup so that structural issues
+    # fail fast instead of surfacing only on first request. Results are
+    # cached (as plain dicts) to avoid re-validating on every request.
+    # Can be disabled by setting APP_DISABLE_EAGER_VALIDATION=1.
+    disable_eager = os.getenv("APP_DISABLE_EAGER_VALIDATION") == "1"
+    validated_cache: dict[str, list[dict[str, Any]]] = {}
+
+    core_adapters: dict[str, TypeAdapter] = {
+        "requirements.json": TypeAdapter(list[RequirementOut]),
+        "compliance.json": TypeAdapter(list[ComplianceOut]),
+        "vulnerabilities.json": TypeAdapter(list[VulnerabilityOut]),
+    }
+
+    if not disable_eager:
+        for fname, adapter in core_adapters.items():
+            path = core_dir / fname
+            if not path.exists():
+                continue  # absence is not fatal; endpoint will 404 later
+            data, err = load_json(path)
+            if err:
+                # Treat invalid JSON or other IO issues as startup failure.
+                raise RuntimeError(f"Failed loading {fname}: {err.detail}")
+            if not isinstance(data, list):
+                raise RuntimeError(f"{fname} root must be a list")
+            try:
+                validated = adapter.validate_python(data)
+            except ValidationError as e:
+                raise RuntimeError(f"Validation error in {fname}: {len(e.errors())} issues") from e
+            # Store as list[dict] to keep response_model flow unchanged and
+            # allow subsequent filtering logic to operate on dicts.
+            validated_cache[fname] = [m.model_dump() for m in validated]
+
+    # Adapter for solutions datasets (validated lazily & cached per file)
+    solutions_adapter = TypeAdapter(list[SolutionOut])
+    solutions_validated_cache: dict[str, list[dict[str, Any]]] = {}
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173"],
@@ -85,7 +125,11 @@ def create_app(data_root: Path | None = None) -> FastAPI:
         return {"status": "ok"}
 
     def _load_list(filename: str) -> list[dict]:
-        # Try resolving the file in core directory first, then repo root as legacy fallback
+        # If we have a validated cache entry, return a shallow copy to avoid accidental mutation
+        if filename in validated_cache:
+            return [dict(item) for item in validated_cache[filename]]
+
+        # Fallback path-based loading (legacy or when eager validation disabled)
         primary = core_dir / filename
         path = primary if primary.exists() else repo_root / filename
         data, err = load_json(path)
@@ -95,6 +139,21 @@ def create_app(data_root: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=500, detail=err.detail)
         if not isinstance(data, list):
             raise HTTPException(status_code=500, detail=f"{filename} root must be a list")
+
+        # Validate on-demand if eager disabled
+        adapter = core_adapters.get(filename)
+        if adapter is not None and disable_eager:
+            try:
+                validated = adapter.validate_python(data)
+            except ValidationError as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "file": filename,
+                        "errors": e.errors(),
+                    },
+                ) from e
+            data = [m.model_dump() for m in validated]
         return data
 
     @app.get("/api/requirements", response_model=list[RequirementOut])
@@ -150,7 +209,24 @@ def create_app(data_root: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=500, detail=err.detail)
         if not isinstance(data, list):
             raise HTTPException(status_code=500, detail=f"{path.name} root must be a list")
-        return data
+
+        # Lazy validation & caching for solutions datasets
+        cache_key = path.name
+        if cache_key in solutions_validated_cache:
+            return [dict(item) for item in solutions_validated_cache[cache_key]]
+        try:
+            validated = solutions_adapter.validate_python(data)
+        except ValidationError as e:
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "file": path.name,
+                    "errors": e.errors(),
+                },
+            ) from e
+        dumped = [m.model_dump() for m in validated]
+        solutions_validated_cache[cache_key] = dumped
+        return dumped
 
     @app.get("/api/solutions/index", response_model=SolutionsIndexOut)
     def api_solutions_index():
@@ -178,7 +254,7 @@ def create_app(data_root: Path | None = None) -> FastAPI:
         datasets = []
         for core in ["requirements", "compliance", "vulnerabilities"]:
             filename = f"{core}.json"
-            path = data_root / filename
+            path = core_dir / filename
             exists = path.exists()
             datasets.append(
                 {
@@ -188,12 +264,18 @@ def create_app(data_root: Path | None = None) -> FastAPI:
                     "exists": exists,
                 }
             )
+        if solutions_dir.exists():
+            try:
+                rel_dir = str(solutions_dir.relative_to(core_dir))
+            except ValueError:
+                # Fallback if solutions_dir is outside core_dir hierarchy
+                rel_dir = str(solutions_dir)
+        else:
+            rel_dir = None
         solutions_summary = {
             "name": "solutions",
             "endpoint": "/api/solutions?name=<dataset>",
-            "directory": str(solutions_dir.relative_to(data_root))
-            if solutions_dir.exists()
-            else None,
+            "directory": rel_dir,
             "exists": solutions_dir.exists(),
             "sources": [],
         }
