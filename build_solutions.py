@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from test import load_yaml_sequence, parse_solutions
+from Normalizing import load_yaml_sequence, parse_solutions
 
 SRC_DIR = Path(__file__).parent / "solutions_yaml"
 OUT_DIR = Path(__file__).parent / "solutions_json"
@@ -19,9 +19,7 @@ def build_all() -> list[str]:
             continue
         solutions = parse_solutions(data)
         out_path = OUT_DIR / (yaml_path.stem + ".json")
-        out_path.write_text(
-            json.dumps(solutions, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        out_path.write_text(json.dumps(solutions, ensure_ascii=False, indent=2), encoding="utf-8")
         written.append(out_path.name)
         print(f"[OK] {yaml_path.name} -> {out_path.relative_to(Path.cwd())}")
     return written

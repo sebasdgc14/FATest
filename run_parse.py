@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from test import (
+from Normalizing import (
     load_yaml_mapping,
     parse_compliance,
     parse_requirements,
