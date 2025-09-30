@@ -112,9 +112,20 @@ def create_app(data_root: Path | None = None) -> FastAPI:
     # Adapter for solutions datasets (validated lazily & cached per file)
     solutions_adapter = TypeAdapter(list[SolutionOut])
     solutions_validated_cache: dict[str, list[dict[str, Any]]] = {}
+    # -----------------------
+    # CORS configuration
+    # -----------------------
+    origins_env = os.getenv("APP_ALLOW_ORIGINS")
+    if origins_env:
+        if origins_env.strip() == "*":
+            allow_origins = ["*"]
+        else:
+            allow_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+    else:
+        allow_origins = ["http://localhost:5173"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origins=allow_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
