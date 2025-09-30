@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { API_BASE } from "../config";
 
 interface SolutionsIndexItem {
   name: string;
@@ -32,7 +33,7 @@ interface SolutionsIndexResponse {
 }
 
 async function fetchSolutionsIndex(): Promise<SolutionsIndexResponse> {
-  const res = await fetch("http://localhost:8000/api/solutions/index");
+  const res = await fetch(`${API_BASE}/api/solutions/index`);
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Failed to load solutions index: ${res.status} ${text}`);
@@ -41,7 +42,7 @@ async function fetchSolutionsIndex(): Promise<SolutionsIndexResponse> {
 }
 
 async function fetchSolutionsDataset(name: string): Promise<SolutionEntry[]> {
-  const url = `http://localhost:8000/api/solutions?name=${encodeURIComponent(name)}`;
+  const url = `${API_BASE}/api/solutions?name=${encodeURIComponent(name)}`;
   const res = await fetch(url);
   if (!res.ok) {
     const text = await res.text();

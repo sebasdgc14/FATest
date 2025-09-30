@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import yaml from "js-yaml";
+import { API_BASE } from "../config";
 
 interface VulnerabilityLang {
   title: string;
@@ -82,7 +83,7 @@ function getInitialLang(): LangChoice {
 }
 
 async function fetchVulnerabilities(lang: LangChoice): Promise<VulnerabilityItem[]> {
-  const base = "http://localhost:8000/api/vulnerabilities";
+  const base = `${API_BASE}/api/vulnerabilities`;
   const url = lang === "both" ? base : `${base}?lang=${lang}`;
   const res = await fetch(url);
   if (!res.ok) {

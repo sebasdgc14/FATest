@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { API_BASE } from "../config";
 
 interface ComplianceDefinition {
   id: string;
@@ -27,7 +28,7 @@ function getInitialLang(): "en" | "es" | "both" {
 }
 
 async function fetchCompliance(lang: "en" | "es" | "both"): Promise<ComplianceItem[]> {
-  const base = "http://localhost:8000/api/compliance";
+  const base = `${API_BASE}/api/compliance`;
   const url = lang === "both" ? base : `${base}?lang=${lang}`;
   const res = await fetch(url);
   if (!res.ok) {

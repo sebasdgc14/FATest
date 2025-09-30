@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { API_BASE } from "../config";
 
 interface RequirementLang {
   title: string;
@@ -25,7 +26,7 @@ function getInitialLang(): "en" | "es" | "both" {
 }
 
 async function fetchRequirements(lang: "en" | "es" | "both"): Promise<RequirementItem[]> {
-  const base = "http://localhost:8000/api/requirements";
+  const base = `${API_BASE}/api/requirements`;
   const url = lang === "both" ? base : `${base}?lang=${lang}`;
   const res = await fetch(url);
   if (!res.ok) {
