@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -25,9 +26,50 @@ def _filter_lang(items: list[dict], lang: str) -> list[dict]:
 
 
 def create_app(data_root: Path | None = None) -> FastAPI:
-    """Application factory for improved testability & functional style."""
-    data_root = data_root or Path(__file__).resolve().parents[1]
-    solutions_dir = data_root / "solutions_json"
+    """Application factory.
+
+    Data directory resolution order (unless explicitly provided):
+      1. Env var APP_CORE_DATA_DIR (core JSON: requirements.json, etc.)
+      2. <repo_root>/data/core
+      3. <repo_root>/data/solutions (fallback if core misplaced there)
+      4. <repo_root> (legacy layout)
+
+    Solutions directory resolution order:
+      1. Env var APP_SOLUTIONS_DIR
+      2. <repo_root>/data/solutions/solutions_json
+      3. <repo_root>/data/solutions
+      4. <core_data_dir>/solutions_json (legacy within core root)
+      5. <repo_root>/solutions_json (legacy root)
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+
+    # Core data root
+    if data_root is not None:
+        core_dir = data_root
+    else:
+        env_core = os.getenv("APP_CORE_DATA_DIR")
+        if env_core:
+            core_dir = Path(env_core)
+        else:
+            candidates = [
+                repo_root / "data" / "core",
+                repo_root / "data" / "solutions",  # fallback if user placed core files here
+                repo_root,  # legacy
+            ]
+            core_dir = next((c for c in candidates if c.exists()), candidates[-1])
+
+    # Solutions directory
+    env_solutions = os.getenv("APP_SOLUTIONS_DIR")
+    if env_solutions:
+        solutions_dir = Path(env_solutions)
+    else:
+        sol_candidates = [
+            repo_root / "data" / "solutions" / "solutions_json",
+            repo_root / "data" / "solutions",
+            core_dir / "solutions_json",
+            repo_root / "solutions_json",
+        ]
+        solutions_dir = next((c for c in sol_candidates if c.exists()), sol_candidates[-1])
 
     app = FastAPI(title="PyYAML API")
     app.add_middleware(
@@ -43,7 +85,9 @@ def create_app(data_root: Path | None = None) -> FastAPI:
         return {"status": "ok"}
 
     def _load_list(filename: str) -> list[dict]:
-        path = data_root / filename
+        # Try resolving the file in core directory first, then repo root as legacy fallback
+        primary = core_dir / filename
+        path = primary if primary.exists() else repo_root / filename
         data, err = load_json(path)
         if err:
             if err.kind == "not_found":
