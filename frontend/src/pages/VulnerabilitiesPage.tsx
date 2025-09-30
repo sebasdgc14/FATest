@@ -496,7 +496,7 @@ export default function VulnerabilitiesPage() {
                               const firstColon = yamlText.indexOf(":");
                               if (firstColon !== -1)
                                 yamlText = yamlText.slice(firstColon + 1).replace(/^\s*/, "");
-                            } catch (e) {
+                            } catch {
                               yamlText =
                                 typeof val === "object"
                                   ? JSON.stringify(val, null, 2)
