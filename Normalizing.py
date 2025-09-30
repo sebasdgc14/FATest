@@ -172,23 +172,15 @@ def normalize_compliance(name: str, raw: dict[str, Any]) -> dict[str, Any]:
         for did, dval in defs.items():
             if isinstance(dval, dict):
                 dtitle = ensure_str(dval.get("title"))
-                dlink = (
-                    ensure_str(dval.get("link"))
-                    if dval.get("link") is not None
-                    else None
-                )
+                dlink = ensure_str(dval.get("link")) if dval.get("link") is not None else None
             else:
                 # fallback: treat scalar as title
                 dtitle = ensure_str(dval)
                 dlink = None
-            definitions_list.append(
-                {"id": ensure_str(did), "title": dtitle, "link": dlink}
-            )
+            definitions_list.append({"id": ensure_str(did), "title": dtitle, "link": dlink})
 
     last = (
-        ensure_str(raw.get("last_update_time"))
-        if raw.get("last_update_time") is not None
-        else None
+        ensure_str(raw.get("last_update_time")) if raw.get("last_update_time") is not None else None
     )
 
     build = {
@@ -254,9 +246,7 @@ def normalize_vulnerability(rid: str, raw: dict[str, Any]) -> dict[str, Any]:
         score_base = {
             "attack_vector": ensure_str(score_base_raw.get("attack_vector")),
             "attack_complexity": ensure_str(score_base_raw.get("attack_complexity")),
-            "privileges_required": ensure_str(
-                score_base_raw.get("privileges_required")
-            ),
+            "privileges_required": ensure_str(score_base_raw.get("privileges_required")),
             "user_interaction": ensure_str(score_base_raw.get("user_interaction")),
             "scope": ensure_str(score_base_raw.get("scope")),
             "confidentiality": ensure_str(score_base_raw.get("confidentiality")),
@@ -266,15 +256,9 @@ def normalize_vulnerability(rid: str, raw: dict[str, Any]) -> dict[str, Any]:
     score_temporal = None
     if score_temporal_raw:
         score_temporal = {
-            "exploit_code_maturity": ensure_str(
-                score_temporal_raw.get("exploit_code_maturity")
-            ),
-            "remediation_level": ensure_str(
-                score_temporal_raw.get("remediation_level")
-            ),
-            "report_confidence": ensure_str(
-                score_temporal_raw.get("report_confidence")
-            ),
+            "exploit_code_maturity": ensure_str(score_temporal_raw.get("exploit_code_maturity")),
+            "remediation_level": ensure_str(score_temporal_raw.get("remediation_level")),
+            "report_confidence": ensure_str(score_temporal_raw.get("report_confidence")),
         }
     score: dict[str, Any] | None = None
     if score_base or score_temporal:
@@ -289,12 +273,8 @@ def normalize_vulnerability(rid: str, raw: dict[str, Any]) -> dict[str, Any]:
         score4_base = {
             "attack_vector": ensure_str(score4_base_raw.get("attack_vector")),
             "attack_complexity": ensure_str(score4_base_raw.get("attack_complexity")),
-            "attack_requirements": ensure_str(
-                score4_base_raw.get("attack_requirements")
-            ),
-            "privileges_required": ensure_str(
-                score4_base_raw.get("privileges_required")
-            ),
+            "attack_requirements": ensure_str(score4_base_raw.get("attack_requirements")),
+            "privileges_required": ensure_str(score4_base_raw.get("privileges_required")),
             "user_interaction": ensure_str(score4_base_raw.get("user_interaction")),
             "confidentiality_vc": ensure_str(score4_base_raw.get("confidentiality_vc")),
             "integrity_vi": ensure_str(score4_base_raw.get("integrity_vi")),
@@ -382,11 +362,7 @@ def normalize_solutions(raw: dict[str, Any]) -> dict[str, Any]:
     secure = code_example("secure_code_example", solution)
     language = ensure_str(solution.get("language") or "")
     steps = ensure_list_of_str(solution.get("steps"))
-    last = (
-        ensure_str(raw["last_update_time"])
-        if raw.get("last_update_time") is not None
-        else None
-    )
+    last = ensure_str(raw["last_update_time"]) if raw.get("last_update_time") is not None else None
 
     build = {
         "vulnerability_id": vuln_id,
